@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trocas - SIPC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ecf0f1;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #2C3E50;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1ABC9C;
+            font-size: 24px;
+        }
+
+        .sidebar h2 i {
+            margin-right: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin: 5px 0;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            transition: background-color 0.3s;
+            background-color: #34495E;
+            margin: 2px 10px;
+            border-radius: 5px;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #1ABC9C;
+        }
+
+        .sidebar a i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .user-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color: #34495E;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #BDC3C7;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            flex: 1;
+            background-color: #ecf0f1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .header i {
+            margin-right: 15px;
+        }
+
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filters select,
+        .filters input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .filters select:focus,
+        .filters input:focus {
+            outline: none;
+            border-color: #1ABC9C;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #1ABC9C;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            padding: 20px;
+            border-bottom: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 0;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(26, 188, 156, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-edit {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-edit:hover {
+            background-color: #e67e22;
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-view {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-view:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-pendente {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-aprovada {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejeitada {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-large .modal-content {
+            max-width: 800px;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .close {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1ABC9C;
+        }
+
+        .field-info {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .sale-details {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            background-color: #f8f9fa;
+        }
+
+        .sale-details h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            animation: slideInRight 0.3s;
+        }
+
+        .toast.success {
+            background-color: #27ae60;
+        }
+
+        .toast.error {
+            background-color: #e74c3c;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .actions-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: none;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .filters {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2><i class="fas fa-microchip"></i> SIPC</h2>
+        <div id="sidebar-menu">
+            <!-- Menu will be loaded dynamically -->
+        </div>
+        <div class="user-info">
+            <div class="user-name">Carregando...</div>
+            <div class="user-role">...</div>
+            <button onclick="showChangePasswordModal()" style="background: #1ABC9C; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%;">
+                <i class="fas fa-key"></i> Alterar Senha
+            </button>
+            <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1><i class="fas fa-exchange-alt"></i> Gerenciamento de Trocas</h1>
+            <p>Gerencie as trocas de produtos do sistema</p>
+        </div>
+
+        <div class="actions-bar">
+            <button class="btn-primary" onclick="showAddTrocaModal()">
+                <i class="fas fa-plus"></i> Nova Troca
+            </button>
+            <div class="filters">
+                <select id="filterStatus" onchange="filterTrocas()">
+                    <option value="">Todos os Status</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="aprovada">Aprovada</option>
+                    <option value="rejeitada">Rejeitada</option>
+                </select>
+                <input type="date" id="filterDataInicio" onchange="filterTrocas()" title="Data Início">
+                <input type="date" id="filterDataFim" onchange="filterTrocas()" title="Data Fim">
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchTroca" placeholder="Buscar troca..." onkeyup="searchTrocas()">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Lista de Trocas</h3>
+                <div class="card-actions">
+                    <button class="btn-secondary" onclick="exportTrocas()">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="trocasTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Venda Original</th>
+                                <th>Cliente</th>
+                                <th>Motivo</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trocasTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="trocaModal" class="modal modal-large">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="trocaModalTitle">Nova Troca</h3>
+                <span class="close" onclick="closeTrocaModal()">&times;</span>
+            </div>
+            <form id="trocaForm" onsubmit="saveTrocaForm(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="trocaId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="trocaVendaOriginal">Venda Original *</label>
+                            <select id="trocaVendaOriginal" name="venda_id" required onchange="loadVendaDetails()">
+                                <option value="">Selecione a venda</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="trocaData">Data da Troca *</label>
+                            <input type="date" id="trocaData" name="data_troca" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="trocaMotivo">Motivo da Troca *</label>
+                        <select id="trocaMotivo" name="motivo" required>
+                            <option value="">Selecione o motivo</option>
+                            <option value="defeito">Defeito</option>
+                            <option value="incompatibilidade">Incompatibilidade</option>
+                            <option value="arrependimento">Arrependimento</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="trocaDescricao">Descrição do Problema *</label>
+                        <textarea id="trocaDescricao" name="descricao" maxlength="500" rows="4" required></textarea>
+                        <small class="field-info">Máximo 500 caracteres</small>
+                    </div>
+
+                    <div id="vendaOriginalDetails" class="sale-details" style="display: none;">
+                        <h4>Detalhes da Venda Original</h4>
+                        <div id="vendaOriginalInfo"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeTrocaModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="viewTrocaModal" class="modal modal-large">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="viewTrocaModalTitle">Detalhes da Troca</h3>
+                <span class="close" onclick="closeViewTrocaModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="trocaDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeViewTrocaModal()">Fechar</button>
+                <button type="button" class="btn-success" id="aprovarTrocaBtn" onclick="aprovarTroca()" style="display: none;">
+                    <i class="fas fa-check"></i> Aprovar Troca
+                </button>
+                <button type="button" class="btn-danger" id="rejeitarTrocaBtn" onclick="rejeitarTroca()" style="display: none;">
+                    <i class="fas fa-times"></i> Rejeitar Troca
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Alterar Senha</h3>
+                <span class="close" onclick="closeChangePasswordModal()">&times;</span>
+            </div>
+            <form id="changePasswordForm" onsubmit="changePassword(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="currentPassword">Senha Atual *</label>
+                        <input type="password" id="currentPassword" name="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Nova Senha *</label>
+                        <input type="password" id="newPassword" name="newPassword" minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">Confirmar Nova Senha *</label>
+                        <input type="password" id="confirmNewPassword" name="confirmNewPassword" minlength="6" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeChangePasswordModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Alterar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/js/auth.js"></script>
+    <script>
+        let currentUser = null;
+        let currentTrocaId = null;
+
+        // Permissions system matching categorias.html pattern
+        const PERMISSIONS = {
+            admin: [
+                { name: 'Dashboard', page: 'index.html', icon: 'fas fa-home' },
+                { name: 'Usuários', page: 'usuarios.html', icon: 'fas fa-users' },
+                { name: 'Categorias', page: 'categorias.html', icon: 'fas fa-tags' },
+                { name: 'Marcas', page: 'marcas.html', icon: 'fas fa-trademark' },
+                { name: 'Peças', page: 'pecas.html', icon: 'fas fa-cogs' },
+                { name: 'Clientes', page: 'clientes.html', icon: 'fas fa-user-friends' },
+                { name: 'Fornecedores', page: 'fornecedores.html', icon: 'fas fa-truck' },
+                { name: 'Formas de Pagamento', page: 'formas-pagamento.html', icon: 'fas fa-credit-card' },
+                { name: 'Compras', page: 'compras.html', icon: 'fas fa-shopping-cart' },
+                { name: 'Vendas', page: 'vendas.html', icon: 'fas fa-cash-register' },
+                { name: 'Trocas', page: 'trocas.html', icon: 'fas fa-exchange-alt' },
+                { name: 'Alertas', page: 'alertas.html', icon: 'fas fa-bell' },
+                { name: 'Relatórios', page: 'relatorios.html', icon: 'fas fa-chart-bar' },
+                { name: 'FAQ', page: 'faq.html', icon: 'fas fa-question-circle' },
+                { name: 'Contatos', page: 'contatos.html', icon: 'fas fa-address-book' },
+                { name: 'Endereços', page: 'enderecos.html', icon: 'fas fa-map-marker-alt' }
+            ],
+            gerente: [
+                { name: 'Dashboard', page: 'index.html', icon: 'fas fa-home' },
+                { name: 'Categorias', page: 'categorias.html', icon: 'fas fa-tags' },
+                { name: 'Marcas', page: 'marcas.html', icon: 'fas fa-trademark' },
+                { name: 'Peças', page: 'pecas.html', icon: 'fas fa-cogs' },
+                { name: 'Clientes', page: 'clientes.html', icon: 'fas fa-user-friends' },
+                { name: 'Fornecedores', page: 'fornecedores.html', icon: 'fas fa-truck' },
+                { name: 'Formas de Pagamento', page: 'formas-pagamento.html', icon: 'fas fa-credit-card' },
+                { name: 'Compras', page: 'compras.html', icon: 'fas fa-shopping-cart' },
+                { name: 'Vendas', page: 'vendas.html', icon: 'fas fa-cash-register' },
+                { name: 'Trocas', page: 'trocas.html', icon: 'fas fa-exchange-alt' },
+                { name: 'Alertas', page: 'alertas.html', icon: 'fas fa-bell' },
+                { name: 'Relatórios', page: 'relatorios.html', icon: 'fas fa-chart-bar' },
+                { name: 'FAQ', page: 'faq.html', icon: 'fas fa-question-circle' },
+                { name: 'Contatos', page: 'contatos.html', icon: 'fas fa-address-book' },
+                { name: 'Endereços', page: 'enderecos.html', icon: 'fas fa-map-marker-alt' }
+            ],
+            vendedor: [
+                { name: 'Dashboard', page: 'index.html', icon: 'fas fa-home' },
+                { name: 'Peças', page: 'pecas.html', icon: 'fas fa-cogs' },
+                { name: 'Clientes', page: 'clientes.html', icon: 'fas fa-user-friends' },
+                { name: 'Vendas', page: 'vendas.html', icon: 'fas fa-cash-register' },
+                { name: 'Trocas', page: 'trocas.html', icon: 'fas fa-exchange-alt' },
+                { name: 'FAQ', page: 'faq.html', icon: 'fas fa-question-circle' }
+            ],
+            estoquista: [
+                { name: 'Dashboard', page: 'index.html', icon: 'fas fa-home' },
+                { name: 'Categorias', page: 'categorias.html', icon: 'fas fa-tags' },
+                { name: 'Marcas', page: 'marcas.html', icon: 'fas fa-trademark' },
+                { name: 'Peças', page: 'pecas.html', icon: 'fas fa-cogs' },
+                { name: 'Fornecedores', page: 'fornecedores.html', icon: 'fas fa-truck' },
+                { name: 'Compras', page: 'compras.html', icon: 'fas fa-shopping-cart' },
+                { name: 'Alertas', page: 'alertas.html', icon: 'fas fa-bell' },
+                { name: 'FAQ', page: 'faq.html', icon: 'fas fa-question-circle' }
+            ]
+        };
+
+        // Initialize page with proper auth check
+        document.addEventListener('DOMContentLoaded', function() {
+            if (auth.initialized) {
+                initPage();
+            } else {
+                setTimeout(() => {
+                    if (auth.initialized) {
+                        initPage();
+                    } else {
+                        console.error('Auth system not initialized');
+                        window.location.href = 'login.html';
+                    }
+                }, 500);
+            }
+        });
+
+        function initPage() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = auth.getCurrentUser();
+            updateUserInfo();
+            buildMenu();
+            loadTrocas();
+            loadVendas();
+            
+            // Set today's date as default
+            document.getElementById('trocaData').value = new Date().toISOString().split('T')[0];
+        }
+
+        function updateUserInfo() {
+            if (currentUser) {
+                document.querySelector('.user-name').textContent = currentUser.nome;
+                document.querySelector('.user-role').textContent = getTipoUsuarioText(currentUser.tipo_usuario);
+            }
+        }
+
+        function getTipoUsuarioText(tipo) {
+            const tipos = {
+                'admin': 'Administrador',
+                'gerente': 'Gerente',
+                'vendedor': 'Vendedor',
+                'estoquista': 'Estoquista'
+            };
+            return tipos[tipo] || tipo;
+        }
+
+        function buildMenu() {
+            const menuContainer = document.getElementById('sidebar-menu');
+            const userPermissions = PERMISSIONS[currentUser.tipo_usuario] || [];
+            
+            let menuHTML = '<ul>';
+            userPermissions.forEach(item => {
+                const activeClass = window.location.pathname.includes(item.page) ? 'active' : '';
+                menuHTML += `<li><a href="${item.page}" class="${activeClass}"><i class="${item.icon}"></i> ${item.name}</a></li>`;
+            });
+            menuHTML += '</ul>';
+            
+            menuContainer.innerHTML = menuHTML;
+        }
+
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'block';
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        function changePassword(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+            
+            if (newPassword !== confirmNewPassword) {
+                showToast('As senhas não coincidem', 'error');
+                return;
+            }
+            
+            auth.makeAuthenticatedRequest('/api/auth/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    currentPassword,
+                    newPassword
+                })
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast('Senha alterada com sucesso', 'success');
+                    closeChangePasswordModal();
+                } else {
+                    showToast(data.message || 'Erro ao alterar senha', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao alterar senha', 'error');
+            });
+        }
+
+        function logout() {
+            auth.logout();
+        }
+
+        // Trocas management functions
+        function loadTrocas() {
+            auth.makeAuthenticatedRequest('/api/trocas')
+                .then(data => {
+                    if (data.success) {
+                        displayTrocas(data.trocas);
+                    } else {
+                        showToast('Erro ao carregar trocas', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('Erro ao carregar trocas', 'error');
+                });
+        }
+
+        function loadVendas() {
+            auth.makeAuthenticatedRequest('/api/vendas')
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('trocaVendaOriginal');
+                        select.innerHTML = '<option value="">Selecione a venda</option>';
+                        data.vendas.forEach(venda => {
+                            select.innerHTML += `<option value="${venda.id}">Venda #${venda.id} - ${venda.cliente_nome} - ${new Date(venda.data_venda).toLocaleDateString()}</option>`;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar vendas:', error);
+                });
+        }
+
+        function displayTrocas(trocas) {
+            const tbody = document.getElementById('trocasTableBody');
+            tbody.innerHTML = '';
+
+            trocas.forEach(troca => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${troca.id}</td>
+                    <td>${new Date(troca.data_troca).toLocaleDateString()}</td>
+                    <td>Venda #${troca.venda_id}</td>
+                    <td>${troca.cliente_nome || 'N/A'}</td>
+                    <td>${troca.motivo}</td>
+                    <td><span class="status-badge status-${troca.status}">${troca.status}</span></td>
+                    <td>
+                        <button class="btn-view" onclick="viewTroca(${troca.id})" title="Visualizar">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${troca.status === 'pendente' ? `
+                            <button class="btn-edit" onclick="editTroca(${troca.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" onclick="deleteTroca(${troca.id})" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showAddTrocaModal() {
+            document.getElementById('trocaModalTitle').textContent = 'Nova Troca';
+            document.getElementById('trocaForm').reset();
+            document.getElementById('trocaId').value = '';
+            document.getElementById('trocaData').value = new Date().toISOString().split('T')[0];
+            document.getElementById('vendaOriginalDetails').style.display = 'none';
+            document.getElementById('trocaModal').style.display = 'block';
+        }
+
+        function closeTrocaModal() {
+            document.getElementById('trocaModal').style.display = 'none';
+        }
+
+        function saveTrocaForm(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const trocaData = Object.fromEntries(formData.entries());
+            const trocaId = document.getElementById('trocaId').value;
+            
+            const url = trocaId ? `/api/trocas/${trocaId}` : '/api/trocas';
+            const method = trocaId ? 'PUT' : 'POST';
+            
+            auth.makeAuthenticatedRequest(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trocaData)
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast(trocaId ? 'Troca atualizada com sucesso' : 'Troca criada com sucesso', 'success');
+                    closeTrocaModal();
+                    loadTrocas();
+                } else {
+                    showToast(data.message || 'Erro ao salvar troca', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao salvar troca', 'error');
+            });
+        }
+
+        function editTroca(id) {
+            auth.makeAuthenticatedRequest(`/api/trocas/${id}`)
+                .then(data => {
+                    if (data.success) {
+                        const troca = data.troca;
+                        document.getElementById('trocaModalTitle').textContent = 'Editar Troca';
+                        document.getElementById('trocaId').value = troca.id;
+                        document.getElementById('trocaVendaOriginal').value = troca.venda_id;
+                        document.getElementById('trocaData').value = troca.data_troca.split('T')[0];
+                        document.getElementById('trocaMotivo').value = troca.motivo;
+                        document.getElementById('trocaDescricao').value = troca.descricao;
+                        
+                        loadVendaDetails();
+                        document.getElementById('trocaModal').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('Erro ao carregar troca', 'error');
+                });
+        }
+
+        function deleteTroca(id) {
+            if (confirm('Tem certeza que deseja excluir esta troca?')) {
+                auth.makeAuthenticatedRequest(`/api/trocas/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(data => {
+                    if (data.success) {
+                        showToast('Troca excluída com sucesso', 'success');
+                        loadTrocas();
+                    } else {
+                        showToast('Erro ao excluir troca', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('Erro ao excluir troca', 'error');
+                });
+            }
+        }
+
+        function viewTroca(id) {
+            currentTrocaId = id;
+            auth.makeAuthenticatedRequest(`/api/trocas/${id}`)
+                .then(data => {
+                    if (data.success) {
+                        const troca = data.troca;
+                        document.getElementById('viewTrocaModalTitle').textContent = `Troca #${troca.id}`;
+                        
+                        let detailsHTML = `
+                            <div class="sale-details">
+                                <h4>Informações da Troca</h4>
+                                <p><strong>Data:</strong> ${new Date(troca.data_troca).toLocaleDateString()}</p>
+                                <p><strong>Venda Original:</strong> #${troca.venda_id}</p>
+                                <p><strong>Cliente:</strong> ${troca.cliente_nome || 'N/A'}</p>
+                                <p><strong>Motivo:</strong> ${troca.motivo}</p>
+                                <p><strong>Status:</strong> <span class="status-badge status-${troca.status}">${troca.status}</span></p>
+                                <p><strong>Descrição:</strong> ${troca.descricao}</p>
+                            </div>
+                        `;
+                        
+                        document.getElementById('trocaDetails').innerHTML = detailsHTML;
+                        
+                        // Show action buttons based on status and user permissions
+                        const aprovarBtn = document.getElementById('aprovarTrocaBtn');
+                        const rejeitarBtn = document.getElementById('rejeitarTrocaBtn');
+                        
+                        if (troca.status === 'pendente' && ['admin', 'gerente'].includes(currentUser.tipo_usuario)) {
+                            aprovarBtn.style.display = 'inline-block';
+                            rejeitarBtn.style.display = 'inline-block';
+                        } else {
+                            aprovarBtn.style.display = 'none';
+                            rejeitarBtn.style.display = 'none';
+                        }
+                        
+                        document.getElementById('viewTrocaModal').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('Erro ao carregar detalhes da troca', 'error');
+                });
+        }
+
+        function closeViewTrocaModal() {
+            document.getElementById('viewTrocaModal').style.display = 'none';
+            currentTrocaId = null;
+        }
+
+        function aprovarTroca() {
+            if (!currentTrocaId) return;
+            
+            auth.makeAuthenticatedRequest(`/api/trocas/${currentTrocaId}/aprovar`, {
+                method: 'POST'
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast('Troca aprovada com sucesso', 'success');
+                    closeViewTrocaModal();
+                    loadTrocas();
+                } else {
+                    showToast('Erro ao aprovar troca', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao aprovar troca', 'error');
+            });
+        }
+
+        function rejeitarTroca() {
+            if (!currentTrocaId) return;
+            
+            const motivo = prompt('Motivo da rejeição:');
+            if (!motivo) return;
+            
+            auth.makeAuthenticatedRequest(`/api/trocas/${currentTrocaId}/rejeitar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ motivo })
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast('Troca rejeitada com sucesso', 'success');
+                    closeViewTrocaModal();
+                    loadTrocas();
+                } else {
+                    showToast('Erro ao rejeitar troca', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao rejeitar troca', 'error');
+            });
+        }
+
+        function loadVendaDetails() {
+            const vendaId = document.getElementById('trocaVendaOriginal').value;
+            if (!vendaId) {
+                document.getElementById('vendaOriginalDetails').style.display = 'none';
+                return;
+            }
+            
+            auth.makeAuthenticatedRequest(`/api/vendas/${vendaId}`)
+                .then(data => {
+                    if (data.success) {
+                        const venda = data.venda;
+                        let detailsHTML = `
+                            <p><strong>Cliente:</strong> ${venda.cliente_nome}</p>
+                            <p><strong>Data:</strong> ${new Date(venda.data_venda).toLocaleDateString()}</p>
+                            <p><strong>Total:</strong> R$ ${parseFloat(venda.valor_total).toFixed(2)}</p>
+                            <p><strong>Status:</strong> ${venda.status}</p>
+                        `;
+                        
+                        if (venda.itens && venda.itens.length > 0) {
+                            detailsHTML += '<p><strong>Itens:</strong></p><ul>';
+                            venda.itens.forEach(item => {
+                                detailsHTML += `<li>${item.peca_nome} - Qtd: ${item.quantidade} - R$ ${parseFloat(item.preco_unitario).toFixed(2)}</li>`;
+                            });
+                            detailsHTML += '</ul>';
+                        }
+                        
+                        document.getElementById('vendaOriginalInfo').innerHTML = detailsHTML;
+                        document.getElementById('vendaOriginalDetails').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar detalhes da venda:', error);
+                });
+        }
+
+        function filterTrocas() {
+            const status = document.getElementById('filterStatus').value;
+            const dataInicio = document.getElementById('filterDataInicio').value;
+            const dataFim = document.getElementById('filterDataFim').value;
+            
+            let url = '/api/trocas?';
+            if (status) url += `status=${status}&`;
+            if (dataInicio) url += `data_inicio=${dataInicio}&`;
+            if (dataFim) url += `data_fim=${dataFim}&`;
+            
+            auth.makeAuthenticatedRequest(url)
+                .then(data => {
+                    if (data.success) {
+                        displayTrocas(data.trocas);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                });
+        }
+
+        function searchTrocas() {
+            const searchTerm = document.getElementById('searchTroca').value;
+            
+            auth.makeAuthenticatedRequest(`/api/trocas?search=${encodeURIComponent(searchTerm)}`)
+                .then(data => {
+                    if (data.success) {
+                        displayTrocas(data.trocas);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                });
+        }
+
+        function exportTrocas() {
+            auth.makeAuthenticatedRequest('/api/trocas/export')
+                .then(data => {
+                    if (data.success) {
+                        // Create download link
+                        const blob = new Blob([data.csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'trocas.csv';
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('Erro ao exportar trocas', 'error');
+                });
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

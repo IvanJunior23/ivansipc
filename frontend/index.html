@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SIPC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .sidebar {
+            width: 250px;
+            background: #2C3E50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1ABC9C;
+        }
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            background: #34495E;
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: block;
+            text-align: left;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: #1ABC9C;
+        }
+        .sidebar a.readonly {
+            background: #3a536b !important;
+        }
+        .sidebar .user-info {
+            margin-top: auto;
+            padding: 15px;
+            border-top: 1px solid #34495E;
+            text-align: center;
+        }
+        .sidebar .user-info .user-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .sidebar .user-info .user-role {
+            font-size: 12px;
+            color: #BDC3C7;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .header {
+            background: #1ABC9C;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.9;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-right: 15px;
+        }
+        .stat-icon.products { background: #3498db; }
+        .stat-icon.sales { background: #1ABC9C; }
+        .stat-icon.clients { background: #9b59b6; }
+        .stat-icon.alerts { background: #e74c3c; }
+        .stat-icon.stock { background: #f39c12; }
+        .stat-icon.suppliers { background: #34495e; }
+        .stat-info h3 {
+            font-size: 24px;
+            color: #2C3E50;
+            margin-bottom: 5px;
+        }
+        .stat-info p {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .dashboard-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: #2C3E50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title i {
+            color: #1ABC9C;
+        }
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #e74c3c;
+            background: #fdf2f2;
+            border-radius: 0 5px 5px 0;
+        }
+        .alert-item.warning {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        .alert-item.info {
+            border-left-color: #3498db;
+            background: #ebf3fd;
+        }
+        .alert-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        .alert-item.warning .alert-icon { color: #f39c12; }
+        .alert-item.info .alert-icon { color: #3498db; }
+        .alert-item .alert-icon { color: #e74c3c; }
+        .alert-content {
+            flex: 1;
+        }
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .alert-description {
+            font-size: 12px;
+            color: #666;
+        }
+        .alert-time {
+            font-size: 11px;
+            color: #999;
+            margin-left: auto;
+        }
+        .recent-sales-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .recent-sales-table th,
+        .recent-sales-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .recent-sales-table th {
+            background-color: #f8f9fa;
+            color: #2C3E50;
+            font-weight: bold;
+        }
+        .recent-sales-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-concluida {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-pendente {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-cancelada {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .chart-container {
+            height: 300px;
+            display: flex;
+            align-items: end;
+            justify-content: space-around;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+            position: relative;
+        }
+        .chart-bar {
+            width: 40px;
+            background: linear-gradient(to top, #1ABC9C, #16a085);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+        .chart-bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #666;
+        }
+        .chart-bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #2C3E50;
+            font-weight: bold;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #34495E;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .quick-action-btn:hover {
+            background: #1ABC9C;
+            transform: translateY(-2px);
+        }
+        .quick-action-btn i {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .quick-action-btn span {
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                padding: 10px;
+            }
+            .sidebar h2 {
+                margin-bottom: 10px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .chart-container {
+                height: 200px;
+            }
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2><i class="fas fa-microchip"></i> SIPC</h2>
+        <div id="sidebar-menu">
+        </div>
+        <div class="user-info">
+             <div class="user-name">Carregando...</div>
+             <div class="user-role">...</div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <p>Visão geral do sistema de peças para computadores</p>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon products"><i class="fas fa-microchip"></i></div>
+                <div class="stat-info">
+                    <h3 id="total-produtos">0</h3>
+                    <p>Produtos Cadastrados</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon sales"><i class="fas fa-shopping-cart"></i></div>
+                <div class="stat-info">
+                    <h3 id="total-vendas">0</h3>
+                    <p>Vendas Este Mês</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon clients"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <h3 id="total-clientes">0</h3>
+                    <p>Clientes Ativos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon alerts"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-info">
+                    <h3 id="total-alertas">0</h3>
+                    <p>Alertas Ativos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stock"><i class="fas fa-boxes"></i></div>
+                <div class="stat-info">
+                    <h3 id="estoque-baixo">0</h3>
+                    <p>Itens com Estoque Baixo</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon suppliers"><i class="fas fa-truck"></i></div>
+                <div class="stat-info">
+                    <h3 id="total-fornecedores">0</h3>
+                    <p>Fornecedores Ativos</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <h2 class="section-title"><i class="fas fa-bell"></i> Alertas do Sistema</h2>
+            <div id="alertas-container">
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="dashboard-section">
+                <h2 class="section-title"><i class="fas fa-shopping-cart"></i> Vendas Recentes</h2>
+                <table class="recent-sales-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendas-recentes-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="dashboard-section">
+                <h2 class="section-title"><i class="fas fa-chart-bar"></i> Vendas dos Últimos 7 Dias</h2>
+                <div class="chart-container" id="chart-vendas">
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <h2 class="section-title"><i class="fas fa-bolt"></i> Ações Rápidas</h2>
+            <div class="quick-actions" id="quick-actions-container">
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/auth.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('=== INICIANDO DASHBOARD ===');
+        let isLoading = false;
+        
+        const PERMISSIONS = {
+            admin: {
+                menu: [
+                    { name: 'Dashboard', icon: 'fas fa-home', url: 'index.html', active: true },
+                    { name: 'Categorias', icon: 'fas fa-tags', url: 'categorias.html' },
+                    { name: 'Marcas', icon: 'fas fa-copyright', url: 'marcas.html' },
+                    { name: 'Peças', icon: 'fas fa-microchip', url: 'pecas.html' },
+                    { name: 'Clientes', icon: 'fas fa-users', url: 'clientes.html' },
+                    { name: 'Fornecedores', icon: 'fas fa-truck', url: 'fornecedores.html' },
+                    { name: 'Formas de Pagamento', icon: 'fas fa-credit-card', url: 'formas-pagamento.html' },
+                    { name: 'Compras', icon: 'fas fa-shopping-bag', url: 'compras.html' },
+                    { name: 'Vendas', icon: 'fas fa-shopping-cart', url: 'vendas.html' },
+                    { name: 'Trocas', icon: 'fas fa-exchange-alt', url: 'trocas.html' },
+                    { name: 'Alertas', icon: 'fas fa-bell', url: 'alertas.html' },
+                    { name: 'Relatórios', icon: 'fas fa-chart-bar', url: 'relatorios.html' },
+                    { name: 'FAQ', icon: 'fas fa-question-circle', url: 'faq.html' },
+                    { name: 'Usuários', icon: 'fas fa-user-cog', url: 'usuarios.html' },
+                    { name: 'Contatos', icon: 'fas fa-address-book', url: 'contatos.html' },
+                    { name: 'Endereços', icon: 'fas fa-map-marker-alt', url: 'enderecos.html' }
+                ],
+                quickActions: [
+                     { name: 'Nova Venda', icon: 'fas fa-shopping-cart', url: 'vendas.html' },
+                     { name: 'Cadastrar Peça', icon: 'fas fa-microchip', url: 'pecas.html' },
+                     { name: 'Cadastrar Cliente', icon: 'fas fa-user-plus', url: 'clientes.html' },
+                     { name: 'Nova Compra', icon: 'fas fa-shopping-bag', url: 'compras.html' },
+                     { name: 'Gerenciar Usuários', icon: 'fas fa-users-cog', url: 'usuarios.html' },
+                     { name: 'Ver Alertas', icon: 'fas fa-bell', url: 'alertas.html' }
+                ]
+            },
+            vendedor: {
+                menu: [
+                    { name: 'Dashboard', icon: 'fas fa-home', url: 'index.html', active: true },
+                    { name: 'Clientes', icon: 'fas fa-users', url: 'clientes.html' },
+                    { name: 'Peças', icon: 'fas fa-microchip', url: 'pecas.html', readonly: true },
+                    { name: 'Vendas', icon: 'fas fa-shopping-cart', url: 'vendas.html' },
+                    { name: 'Trocas', icon: 'fas fa-exchange-alt', url: 'trocas.html' },
+                    { name: 'FAQ', icon: 'fas fa-question-circle', url: 'faq.html' }
+                ],
+                quickActions: [
+                        { name: 'Nova Venda', icon: 'fas fa-shopping-cart', url: 'vendas.html' },
+                        { name: 'Cadastrar Cliente', icon: 'fas fa-user-plus', url: 'clientes.html' },
+                        { name: 'Consultar Peças', icon: 'fas fa-search', url: 'pecas.html' },
+                        { name: 'Processar Troca', icon: 'fas fa-exchange-alt', url: 'trocas.html' }
+                ]
+            },
+            estoque: {
+                menu: [
+                    { name: 'Dashboard', icon: 'fas fa-home', url: 'index.html', active: true },
+                    { name: 'Categorias', icon: 'fas fa-tags', url: 'categorias.html' },
+                    { name: 'Marcas', icon: 'fas fa-copyright', url: 'marcas.html' },
+                    { name: 'Peças', icon: 'fas fa-microchip', url: 'pecas.html' },
+                    { name: 'Fornecedores', icon: 'fas fa-truck', url: 'fornecedores.html' },
+                    { name: 'Compras', icon: 'fas fa-shopping-bag', url: 'compras.html' },
+                    { name: 'Alertas', icon: 'fas fa-bell', url: 'alertas.html' },
+                    { name: 'FAQ', icon: 'fas fa-question-circle', url: 'faq.html' }
+                ],
+                quickActions: [
+                        { name: 'Cadastrar Peça', icon: 'fas fa-microchip', url: 'pecas.html' },
+                        { name: 'Nova Compra', icon: 'fas fa-shopping-bag', url: 'compras.html' },
+                        { name: 'Cadastrar Fornecedor', icon: 'fas fa-truck', url: 'fornecedores.html' },
+                        { name: 'Ver Alertas', icon: 'fas fa-bell', url: 'alertas.html' }
+                ]
+            }
+        };
+        
+        if (!auth.initialized) {
+            console.log('⏳ Aguardando auth inicializar...');
+            setTimeout(async () => {
+                await initDashboard();
+            }, 500);
+        } else {
+            await initDashboard();
+        }
+        
+        async function initDashboard() {
+            if (!auth.isAuthenticated()) {
+                console.log('❌ Não autenticado - redirecionando...');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            console.log('✅ Usuário autenticado - carregando dashboard...');
+            
+            try {
+                const userData = await auth.getCurrentUser();
+                console.log('👤 Dados do usuário:', userData);
+                updateUserInfo(userData);
+                buildDynamicMenu(userData.tipo_usuario || 'vendedor');
+            } catch (error) {
+                console.error('❌ Erro ao buscar usuário:', error);
+                buildDynamicMenu('vendedor'); // Fallback
+            }
+            
+            await carregarDashboard();
+            setInterval(carregarDashboard, 5 * 60 * 1000);
+            addLogoutButton();
+        }
+        
+        function buildDynamicMenu(userType) {
+            const sidebar = document.getElementById('sidebar-menu');
+            const quickActionsContainer = document.getElementById('quick-actions-container');
+            
+            const normalizedType = userType.toLowerCase().trim();
+            console.log(`🔐 Tipo de usuário normalizado: "${normalizedType}"`);
+            
+            const permissions = PERMISSIONS[normalizedType] || PERMISSIONS.vendedor;
+            console.log('📋 Permissões encontradas:', permissions);
+            
+            sidebar.innerHTML = '';
+            
+            if (quickActionsContainer) {
+                quickActionsContainer.innerHTML = '';
+            }
+            
+            permissions.menu.forEach((item) => {
+                const link = document.createElement('a');
+                link.href = item.url;
+                
+                let content = `<i class="${item.icon}"></i> ${item.name}`;
+                
+                if (item.readonly) {
+                    content += ' <i class="fas fa-eye" style="margin-left: auto; font-size: 12px; opacity: 0.7;" title="Apenas visualização"></i>';
+                    link.classList.add('readonly');
+                }
+                
+                link.innerHTML = content;
+                
+                const currentPage = window.location.pathname.split('/').pop();
+                if (item.url === currentPage) {
+                     link.classList.add('active');
+                }
+                
+                sidebar.appendChild(link);
+            });
+            
+            if (quickActionsContainer && permissions.quickActions) {
+                 permissions.quickActions.forEach((action) => {
+                    const actionBtn = document.createElement('a');
+                    actionBtn.href = action.url;
+                    actionBtn.className = 'quick-action-btn';
+                    actionBtn.innerHTML = `<i class="${action.icon}"></i><span>${action.name}</span>`;
+                    quickActionsContainer.appendChild(actionBtn);
+                });
+            }
+            
+            console.log('✅ Menu construído com sucesso!');
+        }
+        
+        async function carregarDashboard() {
+            if (isLoading) return;
+            isLoading = true;
+            
+            try {
+                const [dashboardResponse, alertasResponse] = await Promise.all([
+                    fetch('/api/dashboard', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    }),
+                    fetch('/api/alertas', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    })
+                ]);
+                
+                if (dashboardResponse.ok) {
+                    const dashboardData = await dashboardResponse.json();
+                    renderDashboard(dashboardData);
+                }
+                
+                if (alertasResponse.ok) {
+                    const alertas = await alertasResponse.json();
+                    renderAlertas(alertas);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                renderDashboard({
+                    totalProdutos: 0,
+                    totalVendas: 0,
+                    totalClientes: 0,
+                    totalAlertas: 0,
+                    estoqueBaixo: 0,
+                    totalFornecedores: 0,
+                    vendasRecentes: [],
+                    chartData: []
+                });
+            } finally {
+                isLoading = false;
+            }
+        }
+        
+        function renderDashboard(data) {
+            document.getElementById('total-produtos').textContent = data.totalProdutos || 0;
+            document.getElementById('total-vendas').textContent = data.totalVendas || 0;
+            document.getElementById('total-clientes').textContent = data.totalClientes || 0;
+            document.getElementById('total-alertas').textContent = data.totalAlertas || 0;
+            document.getElementById('estoque-baixo').textContent = data.estoqueBaixo || 0;
+            document.getElementById('total-fornecedores').textContent = data.totalFornecedores || 0;
+            
+            const vendasBody = document.getElementById('vendas-recentes-body');
+            if (data.vendasRecentes && data.vendasRecentes.length > 0) {
+                vendasBody.innerHTML = data.vendasRecentes.map(venda => `
+                    <tr>
+                        <td>#${venda.id}</td>
+                        <td>${venda.cliente_nome}</td>
+                        <td>R$ ${formatCurrency(venda.total)}</td>
+                        <td><span class="status-badge status-${venda.status}">${venda.status}</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                vendasBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666;">Nenhuma venda recente</td></tr>';
+            }
+            
+            renderChart(data.chartData || []);
+        }
+        
+        function renderAlertas(alertas) {
+            const container = document.getElementById('alertas-container');
+            if (alertas && alertas.length > 0) {
+                container.innerHTML = alertas.map(alerta => `
+                    <div class="alert-item ${alerta.tipo}">
+                        <i class="alert-icon fas fa-${alerta.tipo === 'warning' ? 'exclamation-triangle' : alerta.tipo === 'info' ? 'info-circle' : 'exclamation-circle'}"></i>
+                        <div class="alert-content">
+                            <div class="alert-title">${alerta.titulo}</div>
+                            <div class="alert-description">${alerta.descricao}</div>
+                        </div>
+                        <div class="alert-time">${new Date(alerta.data_criacao).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Nenhum alerta ativo</div>';
+            }
+        }
+        
+        function renderChart(data) {
+            const chartContainer = document.getElementById('chart-vendas');
+            if (data && data.length > 0) {
+                const maxValue = Math.max(...data.map(d => d.valor));
+                chartContainer.innerHTML = data.map(item => {
+                    const height = (item.valor / maxValue) * 250;
+                    return `
+                        <div class="chart-bar" style="height: ${height}px;">
+                            <div class="chart-bar-value">R$ ${formatCurrency(item.valor)}</div>
+                            <div class="chart-bar-label">${item.dia}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                chartContainer.innerHTML = '<div style="text-align: center; color: #666; padding: 50px;">Sem dados de vendas</div>';
+            }
+        }
+        
+        function formatCurrency(value) {
+            return parseFloat(value || 0).toFixed(2).replace('.', ',');
+        }
+        
+        function updateUserInfo(user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userRoleEl = document.querySelector('.user-role');
+            if (userNameEl && userRoleEl) {
+                userNameEl.textContent = user.nome || 'Usuário';
+                userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
+            }
+        }
+        
+        function addLogoutButton() {
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo && !userInfo.querySelector('.logout-btn')) {
+                const logoutBtn = document.createElement('button');
+                logoutBtn.className = 'logout-btn';
+                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
+                logoutBtn.onclick = () => auth.logout();
+                logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
+                userInfo.appendChild(logoutBtn);
+            }
+        }
+    });
+    </script>
+</body>
+</html>
