@@ -80,6 +80,50 @@ class AlertaModel {
       throw new Error(`Erro ao contar alertas: ${error.message}`)
     }
   }
+
+  static async buscarPorId(id) {
+    const query = `
+      SELECT * FROM alerta WHERE alerta_id = ?
+    `
+    try {
+      const [results] = await pool.execute(query, [id])
+      return results[0]
+    } catch (error) {
+      throw new Error(`Erro ao buscar alerta: ${error.message}`)
+    }
+  }
+
+  static async resolver(alertaId, usuarioId) {
+    const query = `
+      UPDATE alerta 
+      SET status = 'Resolvido', 
+          usuario_responsavel_id = ?,
+          data_hora_resolucao = NOW()
+      WHERE alerta_id = ?
+    `
+    try {
+      const [result] = await pool.execute(query, [usuarioId, alertaId])
+      return result.affectedRows > 0
+    } catch (error) {
+      throw new Error(`Erro ao resolver alerta: ${error.message}`)
+    }
+  }
+
+  static async dispensar(alertaId, usuarioId) {
+    const query = `
+      UPDATE alerta 
+      SET status = 'Dispensado', 
+          usuario_responsavel_id = ?,
+          data_hora_resolucao = NOW()
+      WHERE alerta_id = ?
+    `
+    try {
+      const [result] = await pool.execute(query, [usuarioId, alertaId])
+      return result.affectedRows > 0
+    } catch (error) {
+      throw new Error(`Erro ao dispensar alerta: ${error.message}`)
+    }
+  }
 }
 
 module.exports = AlertaModel

@@ -13,4 +13,7 @@ router.get("/estoque-baixo", authenticateToken, AlertaController.getAlertasEstoq
 // Contar alertas
 router.get("/contador", authenticateToken, AlertaController.getContadorAlertas)
 
+router.put("/:id/resolver", authenticateToken, AlertaController.resolverAlerta)
+router.put("/:id/dispensar", authenticateToken, AlertaController.dispensarAlerta)
+
 module.exports = router

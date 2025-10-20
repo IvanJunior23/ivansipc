@@ -25,7 +25,15 @@ const authenticateToken = (req, res, next) => {
   }
 
   try {
+    console.log(" Middleware: iniciando verificação do token")
     const decoded = jwtDebugger.debugTokenVerification(token, JWT_SECRET)
+
+    console.log(" Middleware: token verificado com sucesso, decoded:", decoded)
+
+    if (!decoded || !decoded.id) {
+      console.error(" Middleware: token decodificado não contém ID do usuário:", decoded)
+      throw new Error("Token decodificado inválido - ID do usuário não encontrado")
+    }
 
     jwtDebugger.log("SUCCESS", "Token authentication successful", {
       userId: decoded.id,
@@ -35,8 +43,11 @@ const authenticateToken = (req, res, next) => {
     })
 
     req.user = decoded
+    console.log(" Middleware: req.user definido:", req.user)
+    console.log(" Middleware: chamando next()")
     next()
   } catch (err) {
+    console.error(" Middleware: erro na verificação do token:", err)
     jwtDebugger.log("ERROR", "Token authentication failed", {
       error: err.message,
       errorName: err.name,
@@ -68,6 +79,14 @@ const authorizeRole = (...roles) => {
         error: "Usuário não autenticado",
       })
     }
+
+    console.log("[DEBUG] Authorization check:", {
+      userType: req.user.tipo_usuario,
+      requiredRoles: roles,
+      hasAccess: roles.includes(req.user.tipo_usuario),
+      url: req.originalUrl,
+      method: req.method,
+    })
 
     if (!roles.includes(req.user.tipo_usuario)) {
       console.log("❌ Acesso negado:", { userType: req.user.tipo_usuario, requiredRoles: roles })

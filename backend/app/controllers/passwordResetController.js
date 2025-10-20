@@ -9,24 +9,24 @@ let emailConfigured = false
 
 try {
   const nodemailer = require("nodemailer")
-  
+
   // Check if SMTP configuration is available
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT) || 587,
+      port: Number.parseInt(process.env.SMTP_PORT) || 587,
       secure: false, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        rejectUnauthorized: false // Para desenvolvimento
-      }
+        rejectUnauthorized: false, // Para desenvolvimento
+      },
     })
 
     // Verify connection configuration
-    transporter.verify(function (error, success) {
+    transporter.verify((error, success) => {
       if (error) {
         console.log("❌ SMTP connection failed:", error.message)
         emailConfigured = false
@@ -43,15 +43,18 @@ try {
 }
 
 // Clean expired codes every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [email, data] of resetCodes.entries()) {
-    if (now > data.expires) {
-      resetCodes.delete(email)
-      console.log(`🗑️ Cleaned expired reset code for: ${email}`)
+setInterval(
+  () => {
+    const now = Date.now()
+    for (const [email, data] of resetCodes.entries()) {
+      if (now > data.expires) {
+        resetCodes.delete(email)
+        console.log(`🗑️ Cleaned expired reset code for: ${email}`)
+      }
     }
-  }
-}, 5 * 60 * 1000)
+  },
+  5 * 60 * 1000,
+)
 
 const forgotPassword = async (req, res) => {
   try {
@@ -86,13 +89,13 @@ const forgotPassword = async (req, res) => {
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    
+
     // Store code with expiration (15 minutes)
     resetCodes.set(email, {
       code,
       expires: Date.now() + 15 * 60 * 1000,
       userId: user.usuario_id,
-      attempts: 0 // Track failed attempts
+      attempts: 0, 
     })
 
     if (!emailConfigured) {
@@ -107,8 +110,8 @@ const forgotPassword = async (req, res) => {
     }
 
     console.log("📧 Sending reset code to:", email)
-    
-    // Send email
+
+    // Encmainhar email
     const mailOptions = {
       from: `"SIPC Sistema" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to: email,
@@ -117,7 +120,7 @@ const forgotPassword = async (req, res) => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #1ABC9C; margin: 0;">
-              <span style="font-size: 32px;">🔧</span> SIPC
+              <span style="font-size: 32px;"></span> SIPC
             </h1>
             <p style="color: #666; margin: 5px 0;">Sistema de Inventário de Peças para Computadores</p>
           </div>
@@ -230,13 +233,13 @@ const resetPassword = async (req, res) => {
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(novaSenha, 12)
-    
+
     // Update user password
     await UserModel.updatePassword(resetData.userId, hashedPassword)
-    
+
     // Remove used code
     resetCodes.delete(email)
-    
+
     console.log("✅ Password reset successfully for user:", resetData.userId)
 
     res.json({

@@ -35,12 +35,22 @@ class ClienteController {
   static async listar(req, res) {
     try {
       const incluirInativos = req.query.incluir_inativos === "true"
+      console.log("[v0] Controller: incluirInativos =", incluirInativos)
+
       const clientes = await ClienteService.listarClientes(incluirInativos)
+
+      console.log("[v0] Controller: Total de clientes retornados =", clientes.length)
+      console.log("[v0] Controller: Clientes por status:", {
+        ativos: clientes.filter((c) => c.status).length,
+        inativos: clientes.filter((c) => !c.status).length,
+      })
+
       res.json({
         success: true,
         data: clientes,
       })
     } catch (error) {
+      console.error("[v0] Controller: Erro ao listar clientes:", error)
       res.status(500).json({
         success: false,
         message: error.message,
@@ -75,6 +85,40 @@ class ClienteController {
       res.status(400).json({
         success: false,
         message: error.message,
+      })
+    }
+  }
+
+  static async toggleStatus(req, res) {
+    try {
+      const { id } = req.params
+      const { status } = req.body
+
+      console.log("🔄 Controller: alterando status do cliente ID:", id, "para:", status)
+
+      // Validar se o parâmetro status foi fornecido
+      if (status === undefined || status === null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parâmetro "status" é obrigatório',
+        })
+      }
+
+      // Validar se é um valor boolean válido
+      if (typeof status !== "boolean" && status !== 0 && status !== 1 && status !== "0" && status !== "1") {
+        return res.status(400).json({
+          success: false,
+          error: 'Parâmetro "status" deve ser boolean, 0 ou 1',
+        })
+      }
+
+      const clienteAtualizado = await ClienteService.updateClienteStatus(id, status)
+      res.json({ success: true, data: clienteAtualizado })
+    } catch (error) {
+      console.error("❌ Controller: erro ao alterar status:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Erro interno do servidor",
       })
     }
   }

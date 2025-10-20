@@ -10,7 +10,7 @@ const auth = {
     this.loadStoredAuth()
 
     if (this.isAuthenticated() && window.location.pathname.endsWith("login.html")) {
-      window.location.href = "/index.html"
+      window.location.href = "index.html"
     }
 
     this.setupEventListeners()
@@ -84,7 +84,7 @@ const auth = {
           this.token = cleanToken
           this.user = data.user
 
-          window.location.href = "/index.html"
+          window.location.href = "index.html"
           return { success: true }
         } else {
           console.error("Token recebido do servidor é inválido:", data.token)
@@ -101,7 +101,7 @@ const auth = {
 
   logout() {
     this.clearAuth()
-    window.location.href = "/login.html"
+    window.location.href = "login.html"
   },
 
   getCurrentUser() {

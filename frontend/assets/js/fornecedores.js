@@ -1,470 +1,567 @@
-// Fornecedores Management JavaScript
-let fornecedores = []
-let editingFornecedorId = null
-
-// Declare necessary functions
-function checkAuth() {
-  console.log("Checking authentication...")
-}
-
-function showLoading() {
-  console.log("Loading...")
-}
-
-function getToken() {
-  const token = localStorage.getItem("token")
-  if (!token) {
-    console.warn("Token não encontrado, redirecionando para login...")
-    window.location.href = "/login.html"
-    return null
+class FornecedorManager {
+  constructor() {
+    this.fornecedores = []
+    this.pessoas = []
+    this.currentEditingId = null
+    this.init()
   }
 
-  // Validate token format
-  if (!isValidJWTFormat(token)) {
-    console.warn("Token inválido encontrado, limpando e redirecionando...")
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    window.location.href = "/login.html"
-    return null
+  async init() {
+    console.log(" 🔄 Inicializando gerenciador de fornecedores")
+    await this.loadFornecedores()
+    await this.loadPessoas()
+    this.setupEventListeners()
   }
 
-  return token.trim()
-}
+  setupEventListeners() {
+    console.log(" 🔧 Configurando event listeners")
 
-function isValidJWTFormat(token) {
-  if (!token || typeof token !== "string") return false
-
-  const parts = token.trim().split(".")
-  if (parts.length !== 3) return false
-
-  try {
-    parts.forEach((part) => {
-      if (!part || part.length === 0) throw new Error("Empty part")
-      atob(part.replace(/-/g, "+").replace(/_/g, "/"))
-    })
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
-function showToast(message, type) {
-  console.log(`Toast: ${message} (${type})`)
-}
-
-function hideLoading() {
-  console.log("Loading hidden...")
-}
-
-// Initialize page
-document.addEventListener("DOMContentLoaded", () => {
-  checkAuth()
-  loadFornecedores()
-})
-
-// Load suppliers from API
-async function loadFornecedores() {
-  try {
-    showLoading()
-    const token = getToken()
-    if (!token) return // getToken will handle redirect
-
-    const response = await fetch("/api/fornecedores", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        window.location.href = "/login.html"
-        return
-      }
-      throw new Error("Erro ao carregar fornecedores")
+    const searchInput = document.getElementById("searchFornecedor")
+    if (searchInput) {
+      searchInput.removeEventListener("input", this.handleSearch)
+      searchInput.addEventListener("input", () => this.handleSearch())
     }
 
-    fornecedores = await response.json()
-    renderFornecedoresTable()
-  } catch (error) {
-    showToast("Erro ao carregar fornecedores: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
-}
-
-// Render suppliers table
-function renderFornecedoresTable() {
-  const tbody = document.getElementById("fornecedoresTableBody")
-  tbody.innerHTML = ""
-
-  fornecedores.forEach((fornecedor) => {
-    const row = document.createElement("tr")
-    const displayName = fornecedor.tipo_pessoa === "fisica" ? fornecedor.nome : fornecedor.razao_social
-    const displayDoc = fornecedor.tipo_pessoa === "fisica" ? fornecedor.cpf : fornecedor.cnpj
-
-    row.innerHTML = `
-            <td>${fornecedor.id}</td>
-            <td>
-                <div class="supplier-name" onclick="viewFornecedor(${fornecedor.id})">
-                    ${displayName}
-                    ${fornecedor.nome_fantasia ? `<small>${fornecedor.nome_fantasia}</small>` : ""}
-                </div>
-            </td>
-            <td>${displayDoc || "-"}</td>
-            <td>
-                <span class="person-type-badge ${fornecedor.tipo_pessoa}">
-                    ${fornecedor.tipo_pessoa === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}
-                </span>
-            </td>
-            <td>${fornecedor.email}</td>
-            <td>${fornecedor.telefone}</td>
-            <td>
-                <span class="status-badge ${fornecedor.status === "ativo" ? "status-active" : "status-inactive"}">
-                    ${fornecedor.status}
-                </span>
-            </td>
-            <td>
-                <button class="btn-icon" onclick="viewFornecedor(${fornecedor.id})" title="Visualizar">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn-icon" onclick="editFornecedor(${fornecedor.id})" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-icon btn-danger" onclick="deleteFornecedor(${fornecedor.id})" title="Excluir">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `
-    tbody.appendChild(row)
-  })
-}
-
-// Toggle supplier person type fields
-function toggleSupplierPersonFields() {
-  const tipoPessoa = document.getElementById("fornecedorTipoPessoa").value
-  const fisicaFields = document.getElementById("fornecedorPessoaFisicaFields")
-  const juridicaFields = document.getElementById("fornecedorPessoaJuridicaFields")
-
-  if (tipoPessoa === "fisica") {
-    fisicaFields.style.display = "block"
-    juridicaFields.style.display = "none"
-    // Make physical person fields required
-    document.getElementById("fornecedorNome").required = true
-    document.getElementById("fornecedorCpf").required = true
-    document.getElementById("fornecedorRazaoSocial").required = false
-    document.getElementById("fornecedorCnpj").required = false
-  } else if (tipoPessoa === "juridica") {
-    fisicaFields.style.display = "none"
-    juridicaFields.style.display = "block"
-    // Make legal person fields required
-    document.getElementById("fornecedorNome").required = false
-    document.getElementById("fornecedorCpf").required = false
-    document.getElementById("fornecedorRazaoSocial").required = true
-    document.getElementById("fornecedorCnpj").required = true
-  } else {
-    fisicaFields.style.display = "none"
-    juridicaFields.style.display = "none"
-  }
-}
-
-// Filter suppliers
-function filterFornecedores() {
-  const tipoPessoaFilter = document.getElementById("filterTipoPessoa").value
-  const statusFilter = document.getElementById("filterStatus").value
-
-  let filteredFornecedores = fornecedores
-
-  if (tipoPessoaFilter) {
-    filteredFornecedores = filteredFornecedores.filter((fornecedor) => fornecedor.tipo_pessoa === tipoPessoaFilter)
-  }
-
-  if (statusFilter) {
-    filteredFornecedores = filteredFornecedores.filter((fornecedor) => fornecedor.status === statusFilter)
-  }
-
-  renderFilteredFornecedoresTable(filteredFornecedores)
-}
-
-// Search suppliers
-function searchFornecedores() {
-  const searchTerm = document.getElementById("searchFornecedor").value.toLowerCase()
-  const filteredFornecedores = fornecedores.filter(
-    (fornecedor) =>
-      (fornecedor.nome && fornecedor.nome.toLowerCase().includes(searchTerm)) ||
-      (fornecedor.razao_social && fornecedor.razao_social.toLowerCase().includes(searchTerm)) ||
-      (fornecedor.cpf && fornecedor.cpf.includes(searchTerm)) ||
-      (fornecedor.cnpj && fornecedor.cnpj.includes(searchTerm)) ||
-      fornecedor.email.toLowerCase().includes(searchTerm),
-  )
-
-  renderFilteredFornecedoresTable(filteredFornecedores)
-}
-
-// Render filtered suppliers table
-function renderFilteredFornecedoresTable(filteredFornecedores) {
-  const tbody = document.getElementById("fornecedoresTableBody")
-  tbody.innerHTML = ""
-
-  filteredFornecedores.forEach((fornecedor) => {
-    const row = document.createElement("tr")
-    const displayName = fornecedor.tipo_pessoa === "fisica" ? fornecedor.nome : fornecedor.razao_social
-    const displayDoc = fornecedor.tipo_pessoa === "fisica" ? fornecedor.cpf : fornecedor.cnpj
-
-    row.innerHTML = `
-            <td>${fornecedor.id}</td>
-            <td>
-                <div class="supplier-name" onclick="viewFornecedor(${fornecedor.id})">
-                    ${displayName}
-                    ${fornecedor.nome_fantasia ? `<small>${fornecedor.nome_fantasia}</small>` : ""}
-                </div>
-            </td>
-            <td>${displayDoc || "-"}</td>
-            <td>
-                <span class="person-type-badge ${fornecedor.tipo_pessoa}">
-                    ${fornecedor.tipo_pessoa === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}
-                </span>
-            </td>
-            <td>${fornecedor.email}</td>
-            <td>${fornecedor.telefone}</td>
-            <td>
-                <span class="status-badge ${fornecedor.status === "ativo" ? "status-active" : "status-inactive"}">
-                    ${fornecedor.status}
-                </span>
-            </td>
-            <td>
-                <button class="btn-icon" onclick="viewFornecedor(${fornecedor.id})" title="Visualizar">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn-icon" onclick="editFornecedor(${fornecedor.id})" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-icon btn-danger" onclick="deleteFornecedor(${fornecedor.id})" title="Excluir">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `
-    tbody.appendChild(row)
-  })
-}
-
-// Show add supplier modal
-function showAddFornecedorModal() {
-  editingFornecedorId = null
-  document.getElementById("fornecedorModalTitle").textContent = "Novo Fornecedor"
-  document.getElementById("fornecedorForm").reset()
-  document.getElementById("fornecedorId").value = ""
-  document.getElementById("fornecedorPessoaFisicaFields").style.display = "none"
-  document.getElementById("fornecedorPessoaJuridicaFields").style.display = "none"
-  document.getElementById("fornecedorModal").style.display = "block"
-}
-
-// View supplier details
-async function viewFornecedor(id) {
-  try {
-    showLoading()
-    const token = getToken()
-    if (!token) return // getToken will handle redirect
-
-    const response = await fetch(`/api/fornecedores/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    window.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("fornecedorModal")) {
+        this.closeFornecedorModal()
+      }
+      if (e.target === document.getElementById("viewFornecedorModal")) {
+        this.closeViewFornecedorModal()
+      }
     })
 
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        window.location.href = "/login.html"
-        return
-      }
-      throw new Error("Erro ao carregar detalhes do fornecedor")
+    const pessoaSelect = document.getElementById("pessoaSelect")
+    if (pessoaSelect) {
+      pessoaSelect.addEventListener("change", () => this.onPessoaSelected())
+    }
+  }
+
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error(" ❌ Token não encontrado")
+      window.location.href = "login.html"
+      return null
     }
 
-    const fornecedor = await response.json()
-    renderFornecedorDetails(fornecedor)
-    document.getElementById("viewFornecedorModal").style.display = "block"
-  } catch (error) {
-    showToast("Erro ao carregar detalhes: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
-}
-
-// Render supplier details
-function renderFornecedorDetails(fornecedor) {
-  const detailsContainer = document.getElementById("fornecedorDetails")
-  const displayName = fornecedor.tipo_pessoa === "fisica" ? fornecedor.nome : fornecedor.razao_social
-  const displayDoc = fornecedor.tipo_pessoa === "fisica" ? fornecedor.cpf : fornecedor.cnpj
-
-  detailsContainer.innerHTML = `
-        <div class="supplier-details">
-            <div class="supplier-info">
-                <h3>${displayName}</h3>
-                <p><strong>Tipo:</strong> ${fornecedor.tipo_pessoa === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}</p>
-                <p><strong>${fornecedor.tipo_pessoa === "fisica" ? "CPF" : "CNPJ"}:</strong> ${displayDoc || "Não informado"}</p>
-                ${fornecedor.tipo_pessoa === "fisica" && fornecedor.rg ? `<p><strong>RG:</strong> ${fornecedor.rg}</p>` : ""}
-                ${fornecedor.tipo_pessoa === "fisica" && fornecedor.data_nascimento ? `<p><strong>Data de Nascimento:</strong> ${new Date(fornecedor.data_nascimento).toLocaleDateString("pt-BR")}</p>` : ""}
-                ${fornecedor.tipo_pessoa === "juridica" && fornecedor.nome_fantasia ? `<p><strong>Nome Fantasia:</strong> ${fornecedor.nome_fantasia}</p>` : ""}
-                ${fornecedor.tipo_pessoa === "juridica" && fornecedor.inscricao_estadual ? `<p><strong>Inscrição Estadual:</strong> ${fornecedor.inscricao_estadual}</p>` : ""}
-                <p><strong>Email:</strong> ${fornecedor.email}</p>
-                <p><strong>Telefone:</strong> ${fornecedor.telefone}</p>
-                <p><strong>Observações:</strong> ${fornecedor.observacoes || "Nenhuma observação"}</p>
-                <p><strong>Status:</strong> <span class="status-badge ${fornecedor.status === "ativo" ? "status-active" : "status-inactive"}">${fornecedor.status}</span></p>
-            </div>
-        </div>
-    `
-}
-
-// Edit supplier
-function editFornecedor(id) {
-  const fornecedor = fornecedores.find((f) => f.id === id)
-  if (!fornecedor) return
-
-  editingFornecedorId = id
-  document.getElementById("fornecedorModalTitle").textContent = "Editar Fornecedor"
-  document.getElementById("fornecedorId").value = fornecedor.id
-  document.getElementById("fornecedorTipoPessoa").value = fornecedor.tipo_pessoa
-
-  toggleSupplierPersonFields()
-
-  if (fornecedor.tipo_pessoa === "fisica") {
-    document.getElementById("fornecedorNome").value = fornecedor.nome || ""
-    document.getElementById("fornecedorCpf").value = fornecedor.cpf || ""
-    document.getElementById("fornecedorRg").value = fornecedor.rg || ""
-    document.getElementById("fornecedorDataNascimento").value = fornecedor.data_nascimento || ""
-  } else {
-    document.getElementById("fornecedorRazaoSocial").value = fornecedor.razao_social || ""
-    document.getElementById("fornecedorCnpj").value = fornecedor.cnpj || ""
-    document.getElementById("fornecedorNomeFantasia").value = fornecedor.nome_fantasia || ""
-    document.getElementById("fornecedorInscricaoEstadual").value = fornecedor.inscricao_estadual || ""
-  }
-
-  document.getElementById("fornecedorEmail").value = fornecedor.email
-  document.getElementById("fornecedorTelefone").value = fornecedor.telefone
-  document.getElementById("fornecedorObservacoes").value = fornecedor.observacoes || ""
-  document.getElementById("fornecedorStatus").value = fornecedor.status
-  document.getElementById("fornecedorModal").style.display = "block"
-}
-
-// Save supplier form
-async function saveFornecedorForm(event) {
-  event.preventDefault()
-
-  const formData = new FormData(event.target)
-  const fornecedorData = {}
-
-  for (const [key, value] of formData.entries()) {
-    fornecedorData[key] = typeof value === "string" ? value.trim() : value
-  }
-
-  try {
-    showLoading()
-    const token = getToken()
-    if (!token) return // getToken will handle redirect
-
-    const url = editingFornecedorId ? `/api/fornecedores/${editingFornecedorId}` : "/api/fornecedores"
-    const method = editingFornecedorId ? "PUT" : "POST"
-
-    const response = await fetch(url, {
-      method: method,
+    const defaultOptions = {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(fornecedorData),
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        window.location.href = "/login.html"
-        return
-      }
-      throw new Error(result.message || "Erro ao salvar fornecedor")
     }
 
-    showToast(editingFornecedorId ? "Fornecedor atualizado com sucesso!" : "Fornecedor criado com sucesso!", "success")
-    closeFornecedorModal()
-    loadFornecedores()
-  } catch (error) {
-    showToast("Erro ao salvar fornecedor: " + error.message, "error")
-  } finally {
-    hideLoading()
+    const finalOptions = { ...defaultOptions, ...options }
+    if (options.body && typeof options.body === "object") {
+      finalOptions.body = JSON.stringify(options.body)
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000${url}`, finalOptions)
+
+      if (response.status === 401) {
+        console.error(" ❌ Token expirado, redirecionando para login")
+        localStorage.removeItem("token")
+        window.location.href = "login.html"
+        return null
+      }
+
+      return response
+    } catch (error) {
+      console.error(" ❌ Erro na requisição:", error)
+      this.showToast("Erro de conexão com o servidor", "error")
+      return null
+    }
+  }
+
+  async loadFornecedores() {
+    try {
+      this.showLoading(true)
+      console.log(" 🔄 Carregando fornecedores da API...")
+
+      const response = await this.makeAuthenticatedRequest("/api/fornecedores?incluir_inativos=true")
+      if (!response || !response.ok) {
+        throw new Error("Erro ao carregar fornecedores")
+      }
+
+      const result = await response.json()
+      console.log(" 📦 Resposta da API de fornecedores:", result)
+
+      if (result.success) {
+        this.fornecedores = result.data || []
+        console.log(" ✅ Fornecedores carregados:", this.fornecedores.length)
+        console.log(" 📋 Dados dos fornecedores:", this.fornecedores)
+        this.renderFornecedores(this.fornecedores)
+      } else {
+        throw new Error(result.error || "Erro desconhecido")
+      }
+    } catch (error) {
+      console.error(" ❌ Erro ao carregar fornecedores:", error)
+      this.showToast("Erro ao carregar fornecedores", "error")
+      this.renderFornecedores([])
+    } finally {
+      this.showLoading(false)
+    }
+  }
+
+  async loadPessoas() {
+    try {
+      console.log(" 🔄 Carregando pessoas da API...")
+
+      const response = await this.makeAuthenticatedRequest("/api/pessoas?incluir_inativos=true")
+      if (!response || !response.ok) {
+        throw new Error("Erro ao carregar pessoas")
+      }
+
+      const result = await response.json()
+      console.log(" 📦 Resposta da API de pessoas:", result)
+
+      if (result.success) {
+        this.pessoas = result.data || []
+        console.log(" ✅ Pessoas carregadas:", this.pessoas.length)
+        this.populatePessoaSelect()
+      } else {
+        throw new Error(result.error || "Erro desconhecido")
+      }
+    } catch (error) {
+      console.error(" ❌ Erro ao carregar pessoas:", error)
+      this.showToast("Erro ao carregar pessoas", "error")
+    }
+  }
+
+  populatePessoaSelect() {
+    const select = document.getElementById("pessoaSelect")
+    if (!select) return
+
+    select.innerHTML = '<option value="">-- Selecione uma pessoa ou preencha manualmente --</option>'
+
+    this.pessoas.forEach((pessoa) => {
+      const option = document.createElement("option")
+      option.value = pessoa.pessoa_id
+      option.textContent = `${pessoa.nome} (ID: ${pessoa.pessoa_id})`
+      select.appendChild(option)
+    })
+
+    console.log(" ✅ Seletor de pessoas populado com", this.pessoas.length, "opções")
+  }
+
+  async onPessoaSelected() {
+    const select = document.getElementById("pessoaSelect")
+    const selectedOption = select.options[select.selectedIndex]
+    const pessoaInfo = document.getElementById("pessoaInfo")
+
+    if (!selectedOption.value) {
+      pessoaInfo.style.display = "none"
+      return
+    }
+
+    try {
+      const pessoaId = selectedOption.value
+      console.log(" 👤 Carregando dados completos da pessoa ID:", pessoaId)
+
+      const response = await this.makeAuthenticatedRequest(`/api/pessoas/${pessoaId}`)
+      if (!response || !response.ok) {
+        throw new Error("Erro ao carregar dados da pessoa")
+      }
+
+      const result = await response.json()
+      console.log(" 📦 Dados completos da pessoa:", result)
+
+      if (result.success && result.data) {
+        const pessoa = result.data
+        console.log(" ✅ Mostrando dados da pessoa:", pessoa)
+
+        document.getElementById("pessoaNome").textContent = pessoa.nome || "-"
+
+        pessoaInfo.style.display = "block"
+        this.showToast("Pessoa selecionada com sucesso!", "success")
+      }
+    } catch (error) {
+      console.error(" ❌ Erro ao carregar dados da pessoa:", error)
+      this.showToast("Erro ao carregar dados da pessoa", "error")
+      pessoaInfo.style.display = "none"
+    }
+  }
+
+  clearFormFields() {
+    console.log(" 🧹 Limpando campos do formulário")
+    document.getElementById("fornecedorNome").value = ""
+    document.getElementById("fornecedorEmail").value = ""
+    document.getElementById("fornecedorTelefone").value = ""
+    document.getElementById("fornecedorLogradouro").value = ""
+    document.getElementById("fornecedorNumero").value = ""
+    document.getElementById("fornecedorComplemento").value = ""
+    document.getElementById("fornecedorBairro").value = ""
+    document.getElementById("fornecedorCidade").value = ""
+    document.getElementById("fornecedorEstado").value = ""
+    document.getElementById("fornecedorCep").value = ""
+  }
+
+  renderFornecedores(fornecedores) {
+    const tbody = document.getElementById("fornecedoresTableBody")
+    if (!tbody) {
+      console.error(" ❌ Elemento fornecedoresTableBody não encontrado")
+      return
+    }
+
+    console.log(" 🎨 Renderizando", fornecedores.length, "fornecedores")
+
+    if (fornecedores.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 40px;">
+            <div style="color: #6c757d;">
+              <i class="fas fa-truck" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+              <h5>Nenhum fornecedor encontrado</h5>
+              <p>Clique em "Novo Fornecedor" para adicionar o primeiro fornecedor.</p>
+            </div>
+          </td>
+        </tr>
+      `
+      return
+    }
+
+    tbody.innerHTML = fornecedores
+      .map((fornecedor) => {
+        const statusClass = fornecedor.status ? "status-ativo" : "status-inativo"
+        const statusText = fornecedor.status ? "Ativo" : "Inativo"
+
+        return `
+          <tr data-id="${fornecedor.fornecedor_id}">
+            <td>${fornecedor.fornecedor_id}</td>
+            <td><strong>${this.escapeHtml(fornecedor.nome || "-")}</strong></td>
+            <td>${this.escapeHtml(fornecedor.cnpj || "-")}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td class="actions-column">
+              <div class="action-buttons" style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn-edit"
+                        onclick="fornecedorManager.editFornecedor(${fornecedor.fornecedor_id})"
+                        title="Editar fornecedor">
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="btn-toggle-status ${fornecedor.status ? "btn-delete" : "btn-view"}"
+                        onclick="confirmAction('${fornecedor.status ? "desativar" : "ativar"}', 'fornecedor', function() { fornecedorManager.performToggleStatus(${fornecedor.fornecedor_id}, ${!fornecedor.status}); })"
+                        title="${fornecedor.status ? "Desativar" : "Ativar"} fornecedor">
+                  <i class="fas ${fornecedor.status ? "fa-toggle-on" : "fa-toggle-off"}"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `
+      })
+      .join("")
+
+    console.log(" ✅ Tabela renderizada com", fornecedores.length, "fornecedores")
+  }
+
+  async performToggleStatus(id, newStatus) {
+    try {
+      this.showLoading(true)
+      console.log(" 🔄 Alterando status do fornecedor ID:", id, "para:", newStatus)
+
+      const response = await this.makeAuthenticatedRequest(`/api/fornecedores/${id}/status`, {
+        method: "PATCH",
+        body: { status: newStatus },
+      })
+
+      if (!response || !response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }))
+        throw new Error(errorData.error || `Erro ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log(" ✅ Status alterado com sucesso:", result)
+
+      const statusText = newStatus ? "ativado" : "inativado"
+      this.showToast(`Fornecedor ${statusText} com sucesso!`, "success")
+
+      setTimeout(async () => {
+        await this.loadFornecedores()
+      }, 500)
+    } catch (error) {
+      console.error(" ❌ Erro ao alterar status:", error)
+      this.showToast(error.message || "Erro ao alterar status do fornecedor", "error")
+    } finally {
+      this.showLoading(false)
+    }
+  }
+
+  showAddFornecedorModal() {
+    console.log(" 📝 Abrindo modal para novo fornecedor")
+    this.currentEditingId = null
+    document.getElementById("fornecedorModalTitle").textContent = "Novo Fornecedor"
+    document.getElementById("fornecedorForm").reset()
+    document.getElementById("fornecedorId").value = ""
+
+    const pessoaSelect = document.getElementById("pessoaSelect")
+    if (pessoaSelect) {
+      pessoaSelect.value = ""
+      pessoaSelect.disabled = false // Habilitar select para novo fornecedor
+    }
+
+    document.getElementById("pessoaInfo").style.display = "none"
+    document.getElementById("fornecedorModal").style.display = "block"
+  }
+
+  async editFornecedor(id) {
+    console.log(" 📝 Editando fornecedor ID:", id)
+    const fornecedor = this.fornecedores.find((f) => f.fornecedor_id === id)
+    if (!fornecedor) {
+      this.showToast("Fornecedor não encontrado", "error")
+      return
+    }
+
+    console.log(" 📋 Dados do fornecedor para edição:", fornecedor)
+
+    this.currentEditingId = id
+    document.getElementById("fornecedorModalTitle").textContent = "Editar Fornecedor"
+    document.getElementById("fornecedorId").value = id
+
+    document.getElementById("fornecedorCnpj").value = fornecedor.cnpj || ""
+
+    const pessoaSelect = document.getElementById("pessoaSelect")
+    if (pessoaSelect && fornecedor.pessoa_id) {
+      pessoaSelect.value = fornecedor.pessoa_id
+      pessoaSelect.disabled = true
+      await this.onPessoaSelected()
+    }
+
+    document.getElementById("fornecedorModal").style.display = "block"
+  }
+
+  closeFornecedorModal() {
+    console.log(" 📝 Fechando modal de fornecedor")
+    document.getElementById("fornecedorModal").style.display = "none"
+    document.getElementById("fornecedorForm").reset()
+    document.getElementById("pessoaInfo").style.display = "none"
+
+    const pessoaSelect = document.getElementById("pessoaSelect")
+    if (pessoaSelect) pessoaSelect.disabled = false
+
+    this.currentEditingId = null
+  }
+
+  closeViewFornecedorModal() {
+    console.log(" 📝 Fechando modal de visualização")
+    document.getElementById("viewFornecedorModal").style.display = "none"
+  }
+
+  async handleFormSubmit(event) {
+    console.log(" 📝 handleFormSubmit chamada")
+    event.preventDefault()
+
+    const formData = new FormData(event.target)
+    const userData = await window.auth.getCurrentUser()
+
+    const fornecedorData = {
+      pessoa_id: Number.parseInt(formData.get("pessoa_id")),
+      cnpj: formData.get("cnpj")?.trim(),
+    }
+
+    if (this.currentEditingId) {
+      fornecedorData.updated_by = userData.usuario_id
+    } else {
+      fornecedorData.created_by = userData.usuario_id
+    }
+
+    if (!fornecedorData.pessoa_id || isNaN(fornecedorData.pessoa_id)) {
+      this.showToast("Por favor, selecione uma pessoa válida", "error")
+      return false
+    }
+
+    if (!fornecedorData.cnpj) {
+      this.showToast("Por favor, informe o CNPJ", "error")
+      return false
+    }
+
+    console.log(" 📝 Dados processados:", fornecedorData)
+
+    try {
+      this.setFormLoading(true)
+
+      const isEdit = this.currentEditingId !== null
+      const url = isEdit ? `/api/fornecedores/${this.currentEditingId}` : "/api/fornecedores"
+      const method = isEdit ? "PUT" : "POST"
+
+      console.log(` 🔄 ${isEdit ? "Atualizando" : "Criando"} fornecedor:`, fornecedorData)
+
+      const response = await this.makeAuthenticatedRequest(url, {
+        method: method,
+        body: fornecedorData,
+      })
+
+      if (!response || !response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }))
+        console.error(" ❌ Resposta da API:", errorData)
+        throw new Error(errorData.message || errorData.error || "Erro ao salvar fornecedor")
+      }
+
+      const result = await response.json()
+      console.log(" ✅ Fornecedor salvo com sucesso:", result)
+
+      this.showToast(result.message || `Fornecedor ${isEdit ? "atualizado" : "criado"} com sucesso!`, "success")
+      this.closeFornecedorModal()
+
+      setTimeout(async () => {
+        await this.loadFornecedores()
+      }, 500)
+    } catch (error) {
+      console.error(" ❌ Erro ao salvar fornecedor:", error)
+      this.showToast(error.message || "Erro ao salvar fornecedor", "error")
+    } finally {
+      this.setFormLoading(false)
+    }
+
+    return false
+  }
+
+  setFormLoading(loading) {
+    const form = document.getElementById("fornecedorForm")
+    const submitBtn = form.querySelector('button[type="submit"]')
+    const cancelBtn = form.querySelector(".btn-secondary")
+    const inputs = form.querySelectorAll("input, select, textarea")
+
+    if (loading) {
+      submitBtn.disabled = true
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'
+      cancelBtn.disabled = true
+      inputs.forEach((input) => (input.disabled = true))
+    } else {
+      submitBtn.disabled = false
+      submitBtn.innerHTML = "Salvar"
+      cancelBtn.disabled = false
+      inputs.forEach((input) => (input.disabled = false))
+    }
+  }
+
+  handleSearch() {
+    const searchTerm = document.getElementById("searchFornecedor").value.toLowerCase().trim()
+    console.log(" 🔍 Buscando por:", searchTerm)
+
+    if (!searchTerm) {
+      this.renderFornecedores(this.fornecedores)
+      return
+    }
+
+    const filtered = this.fornecedores.filter((fornecedor) => {
+      return (
+        (fornecedor.nome && fornecedor.nome.toLowerCase().includes(searchTerm)) ||
+        (fornecedor.cnpj && fornecedor.cnpj.includes(searchTerm))
+      )
+    })
+
+    console.log(` 🔍 Busca por "${searchTerm}" encontrou ${filtered.length} fornecedores`)
+    this.renderFornecedores(filtered)
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement("div")
+    div.textContent = text || ""
+    return div.innerHTML
+  }
+
+  showLoading(show) {
+    console.log(show ? " ⏳ Carregando..." : " ✅ Carregamento concluído")
+  }
+
+  showToast(message, type = "info") {
+    console.log(` ${type.toUpperCase()}: ${message}`)
+
+    const toast = document.createElement("div")
+    toast.className = `toast toast-${type}`
+
+    const icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle"
+
+    toast.innerHTML = `
+      <i class="fas ${icon}"></i>
+      <span>${message}</span>
+    `
+
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === "success" ? "#28a745" : type === "error" ? "#dc3545" : "#17a2b8"};
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      z-index: 9999;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      animation: slideInRight 0.3s ease-out;
+      max-width: 400px;
+    `
+
+    const style = document.createElement("style")
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    `
+    document.head.appendChild(style)
+
+    document.body.appendChild(toast)
+
+    setTimeout(() => {
+      toast.style.animation = "slideInRight 0.3s ease-out reverse"
+      setTimeout(() => {
+        toast.remove()
+        style.remove()
+      }, 300)
+    }, 3000)
   }
 }
 
-// Delete supplier
-async function deleteFornecedor(id) {
-  if (!confirm("Tem certeza que deseja excluir este fornecedor?")) return
+let fornecedorManager
 
-  try {
-    showLoading()
-    const token = getToken()
-    if (!token) return // getToken will handle redirect
-
-    const response = await fetch(`/api/fornecedores/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        window.location.href = "/login.html"
-        return
-      }
-      throw new Error(result.message || "Erro ao excluir fornecedor")
-    }
-
-    showToast("Fornecedor excluído com sucesso!", "success")
-    loadFornecedores()
-  } catch (error) {
-    showToast("Erro ao excluir fornecedor: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
+function showAddFornecedorModal() {
+  fornecedorManager.showAddFornecedorModal()
 }
 
-// Export suppliers
-function exportFornecedores() {
-  showToast("Funcionalidade de exportação em desenvolvimento", "info")
-}
-
-// Close supplier modal
 function closeFornecedorModal() {
-  document.getElementById("fornecedorModal").style.display = "none"
-  editingFornecedorId = null
+  fornecedorManager.closeFornecedorModal()
 }
 
-// Close view supplier modal
 function closeViewFornecedorModal() {
-  document.getElementById("viewFornecedorModal").style.display = "none"
+  fornecedorManager.closeViewFornecedorModal()
 }
 
-// Close modal when clicking outside
-window.onclick = (event) => {
-  const fornecedorModal = document.getElementById("fornecedorModal")
-  const viewModal = document.getElementById("viewFornecedorModal")
+function saveFornecedorForm(event) {
+  event.preventDefault()
+  return fornecedorManager.handleFormSubmit(event)
+}
 
-  if (event.target === fornecedorModal) {
-    closeFornecedorModal()
-  }
-  if (event.target === viewModal) {
-    closeViewFornecedorModal()
+function searchFornecedores() {
+  fornecedorManager.handleSearch()
+}
+
+function filterFornecedores() {
+  console.log(" Filtros em desenvolvimento")
+}
+
+function exportFornecedores() {
+  fornecedorManager.showToast("Funcionalidade de exportação em desenvolvimento", "info")
+}
+
+function confirmAction(action, item, callback) {
+  const message = `Tem certeza que deseja ${action} este ${item}?`
+  if (confirm(message)) {
+    callback()
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log(" 🚀 Inicializando FornecedorManager")
+  fornecedorManager = new FornecedorManager()
+})

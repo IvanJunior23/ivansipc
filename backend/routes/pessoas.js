@@ -1,19 +1,13 @@
-// backend/routes/pessoas.js
-const express = require("express")
+const express = require('express')
 const router = express.Router()
-const pessoaController = require("../app/controllers/PessoaController")
-const { authenticateToken } = require("../middleware/auth")
-const { validatePessoa } = require("../middleware/validation")
+const PessoaController = require('../app/controllers/pessoaController')
 
-// Aplicar autenticação em todas as rotas
-router.use(authenticateToken)
-
-// Rotas CRUD
-router.get("/", pessoaController.list)
-router.post("/", validatePessoa, pessoaController.create)
-router.put("/:id", validatePessoa, pessoaController.update)
-
-// Rota específica para alterar status - SEM validação completa
-router.patch("/:id/status", pessoaController.toggleStatus)
+// Definir as rotas
+router.get('/', PessoaController.list)
+router.get('/:id', PessoaController.getById)
+router.post('/', PessoaController.create)
+router.put('/:id', PessoaController.update)
+router.patch('/:id/status', PessoaController.updateStatus)  // Esta linha está causando erro
+router.delete('/:id', PessoaController.delete)
 
 module.exports = router

@@ -12,5 +12,6 @@ router.get("/", ClienteController.listar)
 router.get("/:id", ClienteController.buscarPorId)
 router.put("/:id", validarCliente, ClienteController.atualizar)
 router.delete("/:id", ClienteController.inativar)
+router.patch("/:id/status", ClienteController.toggleStatus)
 
 module.exports = router

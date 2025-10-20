@@ -8,7 +8,7 @@ const auth = {
   },
   logout: () => {
     localStorage.removeItem("token")
-    window.location.href = "/login.html"
+    window.location.href = "login.html"
   },
 }
 
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function initAlertas() {
     if (!auth.isAuthenticated()) {
-      window.location.href = "/login.html"
+      window.location.href = "login.html"
       return
     }
 

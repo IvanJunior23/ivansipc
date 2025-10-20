@@ -1,21 +1,19 @@
 // backend/middleware/validation.js
 const validator = require("validator")
 
-// Database field length constraints based on schema
 const FIELD_LIMITS = {
-  // Usuario table
   email: 255,
   senha: 255,
 
-  // Pessoa table
+  // Pessoa
   nome: 150,
 
-  // Contato table
+  // Contato
   nome_completo: 150,
   telefone: 20,
   email_contato: 150,
 
-  // Endereco table
+  // Endereco
   logradouro: 255,
   numero: 20,
   complemento: 100,
@@ -24,31 +22,28 @@ const FIELD_LIMITS = {
   estado: 2,
   cep: 9,
 
-  // Categoria table
+  // Categoria
   categoria_nome: 100,
-  categoria_descricao: 65535, // TEXT field
-
-  // Marca table
+  categoria_descricao: 65535,
+  // Marca
   marca_nome: 100,
-  marca_descricao: 65535, // TEXT field
+  marca_descricao: 65535,
 
-  // Forma_pagamento table
+  // Forma_pagamento
   forma_pagamento_nome: 100,
-  forma_pagamento_descricao: 65535, // TEXT field
+  forma_pagamento_descricao: 65535,
 
-  // Peca table
+  // Peca
   nome: 255,
-  descricao: 65535, // TEXT field
+  descricao: 65535,
   imagem_url: 500,
 }
 
-// Sanitize input by trimming whitespace and escaping HTML
 const sanitizeInput = (value) => {
   if (typeof value !== "string") return value
   return validator.escape(value.trim())
 }
 
-// Sanitize all string fields in an object
 const sanitizeObject = (obj) => {
   const sanitized = {}
   for (const [key, value] of Object.entries(obj)) {
@@ -61,7 +56,6 @@ const sanitizeObject = (obj) => {
   return sanitized
 }
 
-// Validate field length according to database constraints
 const validateFieldLength = (fieldName, value, customLimit = null) => {
   if (typeof value !== "string") return null
 
@@ -74,7 +68,6 @@ const validateFieldLength = (fieldName, value, customLimit = null) => {
   return null
 }
 
-// Validate email format and length
 const validateEmail = (email) => {
   const errors = []
 
@@ -95,7 +88,6 @@ const validateEmail = (email) => {
   return errors
 }
 
-// Validate password strength and confirmation
 const validatePassword = (senha, confirmarSenha = null) => {
   const errors = []
 
@@ -114,20 +106,6 @@ const validatePassword = (senha, confirmarSenha = null) => {
     errors.push("Senha deve ter no máximo 255 caracteres")
   }
 
-  // Password strength validation
-  if (!/(?=.*[a-z])/.test(trimmedSenha)) {
-    errors.push("Senha deve conter pelo menos uma letra minúscula")
-  }
-
-  if (!/(?=.*[A-Z])/.test(trimmedSenha)) {
-    errors.push("Senha deve conter pelo menos uma letra maiúscula")
-  }
-
-  if (!/(?=.*\d)/.test(trimmedSenha)) {
-    errors.push("Senha deve conter pelo menos um número")
-  }
-
-  // Confirm password validation
   if (confirmarSenha !== null && trimmedSenha !== confirmarSenha.trim()) {
     errors.push("Confirmação de senha não confere")
   }
@@ -135,27 +113,21 @@ const validatePassword = (senha, confirmarSenha = null) => {
   return errors
 }
 
-// Validate user creation data
 const validateUserCreation = (req, res, next) => {
   const errors = []
-  const { nome, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
+  const { pessoa_id, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome
-  if (!nome || !nome.trim()) {
-    errors.push("Nome é obrigatório")
-  } else {
-    const lengthError = validateFieldLength("nome", nome.trim())
-    if (lengthError) errors.push(lengthError)
+  if (!pessoa_id) {
+    errors.push("Pessoa é obrigatória")
+  } else if (isNaN(pessoa_id) || pessoa_id <= 0) {
+    errors.push("Pessoa deve ser um ID válido")
   }
 
-  // Validate email
   const emailErrors = validateEmail(email)
   errors.push(...emailErrors)
 
-  // Validate email confirmation
   if (confirmarEmail !== undefined) {
     if (!confirmarEmail || !confirmarEmail.trim()) {
       errors.push("Confirmação de e-mail é obrigatória")
@@ -164,11 +136,9 @@ const validateUserCreation = (req, res, next) => {
     }
   }
 
-  // Validate password
   const passwordErrors = validatePassword(senha, confirmarSenha)
   errors.push(...passwordErrors)
 
-  // Validate tipo_usuario
   if (!tipo_usuario || !["admin", "vendedor", "estoque"].includes(tipo_usuario)) {
     errors.push("Tipo de usuário deve ser: admin, vendedor ou estoque")
   }
@@ -184,30 +154,24 @@ const validateUserCreation = (req, res, next) => {
   next()
 }
 
-// Validate user update data
 const validateUserUpdate = (req, res, next) => {
   const errors = []
-  const { nome, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
+  const { pessoa_id, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome if provided
-  if (nome !== undefined) {
-    if (!nome || !nome.trim()) {
-      errors.push("Nome não pode estar vazio")
-    } else {
-      const lengthError = validateFieldLength("nome", nome.trim())
-      if (lengthError) errors.push(lengthError)
+  if (pessoa_id !== undefined) {
+    if (!pessoa_id) {
+      errors.push("Pessoa não pode estar vazia")
+    } else if (isNaN(pessoa_id) || pessoa_id <= 0) {
+      errors.push("Pessoa deve ser um ID válido")
     }
   }
 
-  // Validate email if provided
   if (email !== undefined) {
     const emailErrors = validateEmail(email)
     errors.push(...emailErrors)
 
-    // Validate email confirmation if provided
     if (confirmarEmail !== undefined) {
       if (!confirmarEmail || !confirmarEmail.trim()) {
         errors.push("Confirmação de e-mail é obrigatória quando alterando e-mail")
@@ -217,13 +181,11 @@ const validateUserUpdate = (req, res, next) => {
     }
   }
 
-  // Validate password if provided
   if (senha !== undefined && senha.trim()) {
     const passwordErrors = validatePassword(senha, confirmarSenha)
     errors.push(...passwordErrors)
   }
 
-  // Validate tipo_usuario if provided
   if (tipo_usuario !== undefined && !["admin", "vendedor", "estoque"].includes(tipo_usuario)) {
     errors.push("Tipo de usuário deve ser: admin, vendedor ou estoque")
   }
@@ -239,15 +201,12 @@ const validateUserUpdate = (req, res, next) => {
   next()
 }
 
-// Validate contact data
 const validateContact = (req, res, next) => {
   const errors = []
   const { nome_completo, telefone, email } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome_completo
   if (!nome_completo || !nome_completo.trim()) {
     errors.push("Nome completo é obrigatório")
   } else {
@@ -255,21 +214,18 @@ const validateContact = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate telefone
   if (!telefone || !telefone.trim()) {
     errors.push("Telefone é obrigatório")
   } else {
     const lengthError = validateFieldLength("telefone", telefone.trim())
     if (lengthError) errors.push(lengthError)
 
-    // Basic phone format validation
     const phoneRegex = /^[\d\s\-$$$$+]+$/
     if (!phoneRegex.test(telefone.trim())) {
       errors.push("Formato de telefone inválido")
     }
   }
 
-  // Validate email if provided (optional field)
   if (email && email.trim()) {
     const emailErrors = validateEmail(email)
     errors.push(...emailErrors)
@@ -287,45 +243,40 @@ const validateContact = (req, res, next) => {
 }
 
 const validatePessoa = (req, res, next) => {
-    const { nome, status } = req.body;
-    const errors = [];
+  const { nome, status } = req.body
+  const errors = []
 
-    // Validar nome
-    if (!nome || nome.trim().length === 0) {
-        errors.push({ field: 'nome', message: 'Nome é obrigatório' });
-    } else if (nome.trim().length < 2) {
-        errors.push({ field: 'nome', message: 'Nome deve ter pelo menos 2 caracteres' });
-    } else if (nome.trim().length > 255) {
-        errors.push({ field: 'nome', message: 'Nome deve ter no máximo 255 caracteres' });
-    } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome.trim())) {
-        errors.push({ field: 'nome', message: 'Nome deve conter apenas letras e espaços' });
-    }
+  if (!nome || nome.trim().length === 0) {
+    errors.push({ field: "nome", message: "Nome é obrigatório" })
+  } else if (nome.trim().length < 2) {
+    errors.push({ field: "nome", message: "Nome deve ter pelo menos 2 caracteres" })
+  } else if (nome.trim().length > 255) {
+    errors.push({ field: "nome", message: "Nome deve ter no máximo 255 caracteres" })
+  } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome.trim())) {
+    errors.push({ field: "nome", message: "Nome deve conter apenas letras e espaços" })
+  }
 
-    // Validar status (opcional)
-    if (status && !['ativo', 'inativo'].includes(status)) {
-        errors.push({ field: 'status', message: 'Status deve ser "ativo" ou "inativo"' });
-    }
+  if (status && !["ativo", "inativo"].includes(status)) {
+    errors.push({ field: "status", message: 'Status deve ser "ativo" ou "inativo"' })
+  }
 
-    if (errors.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Dados inválidos',
-            errors: errors
-        });
-    }
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Dados inválidos",
+      errors: errors,
+    })
+  }
 
-    next();
-};
+  next()
+}
 
-// Validate address data
 const validateAddress = (req, res, next) => {
   const errors = []
   const { logradouro, numero, complemento, bairro, cidade, estado, cep } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate required fields
   const requiredFields = [
     { field: "logradouro", name: "Logradouro" },
     { field: "numero", name: "Número" },
@@ -345,12 +296,11 @@ const validateAddress = (req, res, next) => {
     }
   })
 
-  // Validate estado format (2 characters)
   if (estado && estado.trim() && estado.trim().length !== 2) {
     errors.push("Estado deve ter exatamente 2 caracteres")
   }
 
-  // Validate CEP format
+  // Validate CEP
   if (cep && cep.trim()) {
     const cepRegex = /^\d{5}-?\d{3}$/
     if (!cepRegex.test(cep.trim())) {
@@ -358,7 +308,6 @@ const validateAddress = (req, res, next) => {
     }
   }
 
-  // Validate complemento if provided (optional field)
   if (complemento && complemento.trim()) {
     const lengthError = validateFieldLength("complemento", complemento.trim())
     if (lengthError) errors.push(lengthError)
@@ -375,15 +324,12 @@ const validateAddress = (req, res, next) => {
   next()
 }
 
-// Validate category data
 const validarCategoria = (req, res, next) => {
   const errors = []
   const { nome, descricao } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
   if (!nome || !nome.trim()) {
     errors.push("Nome da categoria é obrigatório")
   } else {
@@ -391,7 +337,6 @@ const validarCategoria = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate descricao if provided (optional field)
   if (descricao && descricao.trim()) {
     const lengthError = validateFieldLength("categoria_descricao", descricao.trim())
     if (lengthError) errors.push(lengthError)
@@ -408,15 +353,12 @@ const validarCategoria = (req, res, next) => {
   next()
 }
 
-// Validate brand data
 const validarMarca = (req, res, next) => {
   const errors = []
   const { nome, descricao } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
   if (!nome || !nome.trim()) {
     errors.push("Nome da marca é obrigatório")
   } else {
@@ -424,7 +366,6 @@ const validarMarca = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate descricao if provided (optional field)
   if (descricao && descricao.trim()) {
     const lengthError = validateFieldLength("marca_descricao", descricao.trim())
     if (lengthError) errors.push(lengthError)
@@ -441,15 +382,12 @@ const validarMarca = (req, res, next) => {
   next()
 }
 
-// Validate payment method data
 const validarFormaPagamento = (req, res, next) => {
   const errors = []
   const { nome, descricao } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
   if (!nome || !nome.trim()) {
     errors.push("Nome da forma de pagamento é obrigatório")
   } else {
@@ -457,7 +395,6 @@ const validarFormaPagamento = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate descricao if provided (optional field)
   if (descricao && descricao.trim()) {
     const lengthError = validateFieldLength("forma_pagamento_descricao", descricao.trim())
     if (lengthError) errors.push(lengthError)
@@ -474,7 +411,6 @@ const validarFormaPagamento = (req, res, next) => {
   next()
 }
 
-// Validate parts data
 const validarPeca = (req, res, next) => {
   const errors = []
   const {
@@ -482,17 +418,15 @@ const validarPeca = (req, res, next) => {
     descricao,
     marca_id,
     preco_venda,
-    preco_custo,
+    preco_compra,
     quantidade_estoque,
-    quantidade_minima,
+    estoque_minimo,
     categoria_id,
     condicao,
   } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
   if (!nome || !nome.trim()) {
     errors.push("Nome da peça é obrigatório")
   } else {
@@ -500,27 +434,23 @@ const validarPeca = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate descricao if provided (optional field)
   if (descricao && descricao.trim()) {
     const lengthError = validateFieldLength("descricao", descricao.trim(), 65535)
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate marca_id if provided (optional)
   if (marca_id !== undefined && marca_id !== null && marca_id !== "") {
     if (!Number.isInteger(Number(marca_id)) || Number(marca_id) <= 0) {
       errors.push("ID da marca deve ser um número inteiro positivo")
     }
   }
 
-  // Validate categoria_id if provided (optional)
   if (categoria_id !== undefined && categoria_id !== null && categoria_id !== "") {
     if (!Number.isInteger(Number(categoria_id)) || Number(categoria_id) <= 0) {
       errors.push("ID da categoria deve ser um número inteiro positivo")
     }
   }
 
-  // Validate preco_venda (required)
   if (preco_venda === undefined || preco_venda === null || preco_venda === "") {
     errors.push("Preço de venda é obrigatório")
   } else {
@@ -533,39 +463,35 @@ const validarPeca = (req, res, next) => {
     }
   }
 
-  // Validate preco_custo (required)
-  if (preco_custo === undefined || preco_custo === null || preco_custo === "") {
-    errors.push("Preço de custo é obrigatório")
+  if (preco_compra === undefined || preco_compra === null || preco_compra === "") {
+    errors.push("Preço de compra é obrigatório")
   } else {
-    const preco = Number.parseFloat(preco_custo)
+    const preco = Number.parseFloat(preco_compra)
     if (isNaN(preco) || preco < 0) {
-      errors.push("Preço de custo deve ser um número positivo")
+      errors.push("Preço de compra deve ser um número positivo")
     }
     if (preco > 99999999.99) {
-      errors.push("Preço de custo deve ser menor que R$ 99.999.999,99")
+      errors.push("Preço de compra deve ser menor que R$ 99.999.999,99")
     }
   }
 
-  // Validate quantidade_estoque if provided (optional, defaults to 0)
   if (quantidade_estoque !== undefined && quantidade_estoque !== null && quantidade_estoque !== "") {
     if (!Number.isInteger(Number(quantidade_estoque)) || Number(quantidade_estoque) < 0) {
       errors.push("Quantidade em estoque deve ser um número inteiro não negativo")
     }
   }
 
-  // Validate quantidade_minima (required)
-  if (quantidade_minima === undefined || quantidade_minima === null || quantidade_minima === "") {
-    errors.push("Quantidade mínima é obrigatória")
+  if (estoque_minimo === undefined || estoque_minimo === null || estoque_minimo === "") {
+    errors.push("Estoque mínimo é obrigatório")
   } else {
-    if (!Number.isInteger(Number(quantidade_minima)) || Number(quantidade_minima) < 0) {
-      errors.push("Quantidade mínima deve ser um número inteiro não negativo")
+    if (!Number.isInteger(Number(estoque_minimo)) || Number(estoque_minimo) < 0) {
+      errors.push("Estoque mínimo deve ser um número inteiro não negativo")
     }
   }
 
-  // Validate condicao if provided (optional, defaults to 'novo')
   if (condicao !== undefined && condicao !== null && condicao !== "") {
-    if (!["novo", "usado"].includes(condicao)) {
-      errors.push("Condição deve ser 'novo' ou 'usado'")
+    if (!["novo", "usado", "recondicionado"].includes(condicao)) {
+      errors.push("Condição deve ser 'novo', 'usado' ou 'recondicionado'")
     }
   }
 
@@ -580,22 +506,18 @@ const validarPeca = (req, res, next) => {
   next()
 }
 
-// Validate image data for parts
 const validarImagemPeca = (req, res, next) => {
   const errors = []
   const { imagem_url, descricao } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate imagem_url (required)
   if (!imagem_url || !imagem_url.trim()) {
     errors.push("URL da imagem é obrigatória")
   } else {
     const lengthError = validateFieldLength("imagem_url", imagem_url.trim(), 500)
     if (lengthError) errors.push(lengthError)
 
-    // Basic URL validation
     try {
       new URL(imagem_url.trim())
     } catch {
@@ -603,7 +525,6 @@ const validarImagemPeca = (req, res, next) => {
     }
   }
 
-  // Validate descricao if provided (optional field)
   if (descricao && descricao.trim()) {
     const lengthError = validateFieldLength("descricao", descricao.trim(), 255)
     if (lengthError) errors.push(lengthError)
@@ -620,7 +541,6 @@ const validarImagemPeca = (req, res, next) => {
   next()
 }
 
-// Validate CPF format
 const validateCpf = (cpf) => {
   if (!cpf || !cpf.trim()) {
     return "CPF é obrigatório"
@@ -632,12 +552,10 @@ const validateCpf = (cpf) => {
     return "CPF deve ter 11 dígitos"
   }
 
-  // Check for invalid CPFs (all same digits)
   if (/^(\d)\1{10}$/.test(cleanCpf)) {
     return "CPF inválido"
   }
 
-  // CPF validation algorithm
   let sum = 0
   for (let i = 0; i < 9; i++) {
     sum += Number.parseInt(cleanCpf.charAt(i)) * (10 - i)
@@ -661,7 +579,6 @@ const validateCpf = (cpf) => {
   return null
 }
 
-// Validate CNPJ format
 const validateCnpj = (cnpj) => {
   if (!cnpj || !cnpj.trim()) {
     return "CNPJ é obrigatório"
@@ -673,12 +590,10 @@ const validateCnpj = (cnpj) => {
     return "CNPJ deve ter 14 dígitos"
   }
 
-  // Check for invalid CNPJs (all same digits)
   if (/^(\d)\1{13}$/.test(cleanCnpj)) {
     return "CNPJ inválido"
   }
 
-  // CNPJ validation algorithm
   let length = cleanCnpj.length - 2
   let numbers = cleanCnpj.substring(0, length)
   const digits = cleanCnpj.substring(length)
@@ -713,59 +628,25 @@ const validateCnpj = (cnpj) => {
   return null
 }
 
-// Validate customer data
 const validarCliente = (req, res, next) => {
   const errors = []
-  const { nome, cpf, contato, endereco } = req.body
+  const { pessoa_id, cpf } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
-  if (!nome || !nome.trim()) {
-    errors.push("Nome é obrigatório")
+  // Validar pessoa_id
+  if (!pessoa_id) {
+    errors.push("ID da pessoa é obrigatório")
   } else {
-    const lengthError = validateFieldLength("nome", nome.trim(), 150)
-    if (lengthError) errors.push(lengthError)
+    if (!Number.isInteger(Number(pessoa_id)) || Number(pessoa_id) <= 0) {
+      errors.push("ID da pessoa deve ser um número inteiro positivo")
+    }
   }
 
-  // Validate CPF (required)
+  // Validar CPF
   const cpfError = validateCpf(cpf)
   if (cpfError) errors.push(cpfError)
 
-  // Validate contato if provided (optional)
-  if (contato) {
-    if (contato.nome_completo && !contato.nome_completo.trim()) {
-      errors.push("Nome completo do contato não pode estar vazio")
-    } else if (contato.nome_completo) {
-      const lengthError = validateFieldLength("nome_completo", contato.nome_completo.trim(), 150)
-      if (lengthError) errors.push(lengthError)
-    }
-
-    if (contato.telefone && !contato.telefone.trim()) {
-      errors.push("Telefone do contato não pode estar vazio")
-    } else if (contato.telefone) {
-      const lengthError = validateFieldLength("telefone", contato.telefone.trim(), 20)
-      if (lengthError) errors.push(lengthError)
-    }
-
-    if (contato.email && contato.email.trim()) {
-      const emailErrors = validateEmail(contato.email)
-      errors.push(...emailErrors)
-    }
-  }
-
-  // Validate endereco if provided (optional)
-  if (endereco) {
-    const requiredAddressFields = ["logradouro", "numero", "bairro", "cidade", "estado", "cep"]
-
-    requiredAddressFields.forEach((field) => {
-      if (endereco[field] && !endereco[field].trim()) {
-        errors.push(`${field} do endereço não pode estar vazio`)
-      }
-    })
-  }
-
   if (errors.length > 0) {
     return res.status(400).json({
       success: false,
@@ -777,59 +658,25 @@ const validarCliente = (req, res, next) => {
   next()
 }
 
-// Validate supplier data
 const validarFornecedor = (req, res, next) => {
   const errors = []
-  const { nome, cnpj, contato, endereco } = req.body
+  const { pessoa_id, cnpj } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate nome (required)
-  if (!nome || !nome.trim()) {
-    errors.push("Nome é obrigatório")
+  // Validar pessoa_id
+  if (!pessoa_id) {
+    errors.push("ID da pessoa é obrigatório")
   } else {
-    const lengthError = validateFieldLength("nome", nome.trim(), 150)
-    if (lengthError) errors.push(lengthError)
+    if (!Number.isInteger(Number(pessoa_id)) || Number(pessoa_id) <= 0) {
+      errors.push("ID da pessoa deve ser um número inteiro positivo")
+    }
   }
 
-  // Validate CNPJ (required)
+  // Validar CNPJ
   const cnpjError = validateCnpj(cnpj)
   if (cnpjError) errors.push(cnpjError)
 
-  // Validate contato if provided (optional)
-  if (contato) {
-    if (contato.nome_completo && !contato.nome_completo.trim()) {
-      errors.push("Nome completo do contato não pode estar vazio")
-    } else if (contato.nome_completo) {
-      const lengthError = validateFieldLength("nome_completo", contato.nome_completo.trim(), 150)
-      if (lengthError) errors.push(lengthError)
-    }
-
-    if (contato.telefone && !contato.telefone.trim()) {
-      errors.push("Telefone do contato não pode estar vazio")
-    } else if (contato.telefone) {
-      const lengthError = validateFieldLength("telefone", contato.telefone.trim(), 20)
-      if (lengthError) errors.push(lengthError)
-    }
-
-    if (contato.email && contato.email.trim()) {
-      const emailErrors = validateEmail(contato.email)
-      errors.push(...emailErrors)
-    }
-  }
-
-  // Validate endereco if provided (optional)
-  if (endereco) {
-    const requiredAddressFields = ["logradouro", "numero", "bairro", "cidade", "estado", "cep"]
-
-    requiredAddressFields.forEach((field) => {
-      if (endereco[field] && !endereco[field].trim()) {
-        errors.push(`${field} do endereço não pode estar vazio`)
-      }
-    })
-  }
-
   if (errors.length > 0) {
     return res.status(400).json({
       success: false,
@@ -841,15 +688,12 @@ const validarFornecedor = (req, res, next) => {
   next()
 }
 
-// Validate purchase data
 const validarCompra = (req, res, next) => {
   const errors = []
   const { fornecedor_id, data_compra, itens } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate fornecedor_id (required)
   if (!fornecedor_id) {
     errors.push("ID do fornecedor é obrigatório")
   } else {
@@ -858,7 +702,6 @@ const validarCompra = (req, res, next) => {
     }
   }
 
-  // Validate data_compra if provided (optional, defaults to today)
   if (data_compra && data_compra.trim()) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(data_compra.trim())) {
@@ -871,12 +714,10 @@ const validarCompra = (req, res, next) => {
     }
   }
 
-  // Validate itens (required)
   if (!itens || !Array.isArray(itens) || itens.length === 0) {
     errors.push("Compra deve ter pelo menos um item")
   } else {
     itens.forEach((item, index) => {
-      // Validate peca_id
       if (!item.peca_id) {
         errors.push(`Item ${index + 1}: ID da peça é obrigatório`)
       } else {
@@ -885,7 +726,6 @@ const validarCompra = (req, res, next) => {
         }
       }
 
-      // Validate quantidade
       if (!item.quantidade) {
         errors.push(`Item ${index + 1}: Quantidade é obrigatória`)
       } else {
@@ -894,7 +734,6 @@ const validarCompra = (req, res, next) => {
         }
       }
 
-      // Validate valor_unitario
       if (item.valor_unitario === undefined || item.valor_unitario === null || item.valor_unitario === "") {
         errors.push(`Item ${index + 1}: Valor unitário é obrigatório`)
       } else {
@@ -920,15 +759,12 @@ const validarCompra = (req, res, next) => {
   next()
 }
 
-// Validate sales data
 const validarVenda = (req, res, next) => {
   const errors = []
   const { cliente_id, data_venda, forma_pagamento_id, itens } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate cliente_id (required)
   if (!cliente_id) {
     errors.push("ID do cliente é obrigatório")
   } else {
@@ -937,7 +773,6 @@ const validarVenda = (req, res, next) => {
     }
   }
 
-  // Validate forma_pagamento_id (required)
   if (!forma_pagamento_id) {
     errors.push("ID da forma de pagamento é obrigatório")
   } else {
@@ -946,7 +781,6 @@ const validarVenda = (req, res, next) => {
     }
   }
 
-  // Validate data_venda if provided (optional, defaults to today)
   if (data_venda && data_venda.trim()) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(data_venda.trim())) {
@@ -959,12 +793,10 @@ const validarVenda = (req, res, next) => {
     }
   }
 
-  // Validate itens (required)
   if (!itens || !Array.isArray(itens) || itens.length === 0) {
     errors.push("Venda deve ter pelo menos um item")
   } else {
     itens.forEach((item, index) => {
-      // Validate peca_id
       if (!item.peca_id) {
         errors.push(`Item ${index + 1}: ID da peça é obrigatório`)
       } else {
@@ -973,7 +805,6 @@ const validarVenda = (req, res, next) => {
         }
       }
 
-      // Validate quantidade
       if (!item.quantidade) {
         errors.push(`Item ${index + 1}: Quantidade é obrigatória`)
       } else {
@@ -982,7 +813,6 @@ const validarVenda = (req, res, next) => {
         }
       }
 
-      // Validate valor_unitario
       if (item.valor_unitario === undefined || item.valor_unitario === null || item.valor_unitario === "") {
         errors.push(`Item ${index + 1}: Valor unitário é obrigatório`)
       } else {
@@ -1008,15 +838,12 @@ const validarVenda = (req, res, next) => {
   next()
 }
 
-// Validate exchange data
 const validarTroca = (req, res, next) => {
   const errors = []
   const { venda_id, peca_original_id, peca_nova_id, quantidade, motivo, data_troca } = req.body
 
-  // Sanitize input data
   req.body = sanitizeObject(req.body)
 
-  // Validate venda_id (required)
   if (!venda_id) {
     errors.push("ID da venda é obrigatório")
   } else {
@@ -1025,7 +852,6 @@ const validarTroca = (req, res, next) => {
     }
   }
 
-  // Validate peca_original_id (required)
   if (!peca_original_id) {
     errors.push("ID da peça original é obrigatório")
   } else {
@@ -1034,7 +860,6 @@ const validarTroca = (req, res, next) => {
     }
   }
 
-  // Validate peca_nova_id (required)
   if (!peca_nova_id) {
     errors.push("ID da peça nova é obrigatório")
   } else {
@@ -1043,7 +868,6 @@ const validarTroca = (req, res, next) => {
     }
   }
 
-  // Validate quantidade (required)
   if (!quantidade) {
     errors.push("Quantidade é obrigatória")
   } else {
@@ -1052,7 +876,6 @@ const validarTroca = (req, res, next) => {
     }
   }
 
-  // Validate motivo (required)
   if (!motivo || !motivo.trim()) {
     errors.push("Motivo da troca é obrigatório")
   } else {
@@ -1060,7 +883,6 @@ const validarTroca = (req, res, next) => {
     if (lengthError) errors.push(lengthError)
   }
 
-  // Validate data_troca if provided (optional, defaults to today)
   if (data_troca && data_troca.trim()) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(data_troca.trim())) {

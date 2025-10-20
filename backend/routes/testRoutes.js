@@ -1,6 +1,6 @@
-const express = require('express')
+const express = require("express")
 const router = express.Router()
-const nodemailer = require('nodemailer')
+const nodemailer = require("nodemailer")
 
 // Configurar transporter (mesmo código do controller)
 let transporter = null
@@ -8,20 +8,20 @@ let emailConfigured = false
 
 try {
   if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT) || 587,
+      port: Number.parseInt(process.env.SMTP_PORT) || 587,
       secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        rejectUnauthorized: false
-      }
+        rejectUnauthorized: false,
+      },
     })
 
-    transporter.verify(function (error, success) {
+    transporter.verify((error, success) => {
       if (error) {
         console.log("❌ SMTP connection failed:", error.message)
         emailConfigured = false
@@ -38,38 +38,38 @@ try {
 }
 
 // Rota para testar configuração SMTP
-router.get('/test-email', async (req, res) => {
+router.get("/test-email", async (req, res) => {
   try {
-    console.log('🧪 Testing SMTP configuration...')
-    
+    console.log("🧪 Testing SMTP configuration...")
+
     if (!emailConfigured || !transporter) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'SMTP não configurado ou com erro',
+      return res.status(400).json({
+        success: false,
+        message: "SMTP não configurado ou com erro",
         config: {
-          host: process.env.SMTP_HOST || 'Not set',
-          port: process.env.SMTP_PORT || 'Not set',
-          user: process.env.SMTP_USER ? '✓ Configured' : '❌ Not set',
-          pass: process.env.SMTP_PASS ? '✓ Configured' : '❌ Not set',
-          from: process.env.SMTP_FROM || 'Not set'
-        }
+          host: process.env.SMTP_HOST || "Not set",
+          port: process.env.SMTP_PORT || "Not set",
+          user: process.env.SMTP_USER ? "✓ Configured" : "❌ Not set",
+          pass: process.env.SMTP_PASS ? "✓ Configured" : "❌ Not set",
+          from: process.env.SMTP_FROM || "Not set",
+        },
       })
     }
 
     // E-mail de destino (pode ser passado como query param ou usar o próprio SMTP_USER)
     const testEmail = req.query.email || process.env.SMTP_USER
-    
+
     if (!testEmail) {
       return res.status(400).json({
         success: false,
-        message: 'E-mail de destino não especificado. Use ?email=seuemail@exemplo.com'
+        message: "E-mail de destino não especificado. Use ?email=seuemail@exemplo.com",
       })
     }
 
     const mailOptions = {
       from: `"SIPC Teste" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to: testEmail,
-      subject: 'SIPC - Teste de Configuração SMTP',
+      subject: "SIPC - Teste de Configuração SMTP",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -87,7 +87,7 @@ router.get('/test-email', async (req, res) => {
               <li><strong>Host:</strong> ${process.env.SMTP_HOST}</li>
               <li><strong>Porta:</strong> ${process.env.SMTP_PORT}</li>
               <li><strong>Usuário:</strong> ${process.env.SMTP_USER}</li>
-              <li><strong>Data/Hora:</strong> ${new Date().toLocaleString('pt-BR')}</li>
+              <li><strong>Data/Hora:</strong> ${new Date().toLocaleString("pt-BR")}</li>
             </ul>
           </div>
           
@@ -96,13 +96,13 @@ router.get('/test-email', async (req, res) => {
             <p>Agora você pode usar a funcionalidade de recuperação de senha com segurança!</p>
           </div>
         </div>
-      `
+      `,
     }
 
     console.log(`📧 Sending test email to: ${testEmail}`)
     await transporter.sendMail(mailOptions)
-    
-    console.log('✅ Test email sent successfully!')
+
+    console.log("✅ Test email sent successfully!")
     res.json({
       success: true,
       message: `E-mail de teste enviado com sucesso para ${testEmail}!`,
@@ -110,59 +110,58 @@ router.get('/test-email', async (req, res) => {
       config: {
         host: process.env.SMTP_HOST,
         port: process.env.SMTP_PORT,
-        from: process.env.SMTP_FROM || process.env.SMTP_USER
-      }
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      },
     })
-
   } catch (error) {
-    console.error('❌ Error sending test email:', error)
+    console.error("❌ Error sending test email:", error)
     res.status(500).json({
       success: false,
-      message: 'Erro ao enviar e-mail de teste',
+      message: "Erro ao enviar e-mail de teste",
       error: error.message,
       details: {
         host: process.env.SMTP_HOST,
         port: process.env.SMTP_PORT,
-        secure: false
-      }
+        secure: false,
+      },
     })
   }
 })
 
 // Rota para verificar status da configuração SMTP
-router.get('/smtp-status', (req, res) => {
+router.get("/smtp-status", (req, res) => {
   res.json({
     emailConfigured,
     config: {
       host: process.env.SMTP_HOST || null,
       port: process.env.SMTP_PORT || null,
-      user: process.env.SMTP_USER ? '✓ Configured' : '❌ Not configured',
-      pass: process.env.SMTP_PASS ? '✓ Configured' : '❌ Not configured',
+      user: process.env.SMTP_USER ? "✓ Configured" : "❌ Not configured",
+      pass: process.env.SMTP_PASS ? "✓ Configured" : "❌ Not configured",
       from: process.env.SMTP_FROM || null,
     },
-    status: emailConfigured ? 'ready' : 'not configured'
+    status: emailConfigured ? "ready" : "not configured",
   })
 })
 
 // Rota para testar diferentes configurações SMTP
-router.post('/test-smtp-config', async (req, res) => {
+router.post("/test-smtp-config", async (req, res) => {
   try {
     const { host, port, user, pass, testEmail } = req.body
-    
+
     if (!host || !port || !user || !pass || !testEmail) {
       return res.status(400).json({
         success: false,
-        message: 'Todos os campos são obrigatórios: host, port, user, pass, testEmail'
+        message: "Todos os campos são obrigatórios: host, port, user, pass, testEmail",
       })
     }
 
     // Criar transporter temporário para teste
-    const testTransporter = nodemailer.createTransporter({
+    const testTransporter = nodemailer.createTransport({
       host,
-      port: parseInt(port),
+      port: Number.parseInt(port),
       secure: false,
       auth: { user, pass },
-      tls: { rejectUnauthorized: false }
+      tls: { rejectUnauthorized: false },
     })
 
     // Verificar conexão
@@ -172,21 +171,20 @@ router.post('/test-smtp-config', async (req, res) => {
     await testTransporter.sendMail({
       from: `"SIPC Teste Config" <${user}>`,
       to: testEmail,
-      subject: 'SIPC - Teste de Nova Configuração SMTP',
-      text: 'Se você recebeu este e-mail, a nova configuração SMTP está funcionando!'
+      subject: "SIPC - Teste de Nova Configuração SMTP",
+      text: "Se você recebeu este e-mail, a nova configuração SMTP está funcionando!",
     })
 
     res.json({
       success: true,
-      message: 'Configuração testada com sucesso! E-mail enviado.',
-      config: { host, port, user: user.substring(0, 3) + '***' }
+      message: "Configuração testada com sucesso! E-mail enviado.",
+      config: { host, port, user: user.substring(0, 3) + "***" },
     })
-
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: 'Erro na configuração SMTP',
-      error: error.message
+      message: "Erro na configuração SMTP",
+      error: error.message,
     })
   }
 })

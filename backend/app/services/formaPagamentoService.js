@@ -57,6 +57,34 @@ class FormaPagamentoService {
 
     return { message: "Forma de pagamento inativada com sucesso" }
   }
+
+  static async ativarFormaPagamento(id) {
+    const formaPagamento = await FormaPagamentoModel.buscarPorId(id)
+    if (!formaPagamento) {
+      throw new Error("Forma de pagamento não encontrada")
+    }
+
+    const sucesso = await FormaPagamentoModel.ativar(id)
+    if (!sucesso) {
+      throw new Error("Erro ao ativar forma de pagamento")
+    }
+
+    return { message: "Forma de pagamento ativada com sucesso" }
+  }
+
+  static async updateFormaPagamentoStatus(id, status) {
+    const formaPagamento = await FormaPagamentoModel.buscarPorId(id)
+    if (!formaPagamento) {
+      throw new Error("Forma de pagamento não encontrada")
+    }
+
+    const sucesso = await FormaPagamentoModel.toggleStatus(id, status)
+    if (!sucesso) {
+      throw new Error("Erro ao alterar status da forma de pagamento")
+    }
+
+    return await FormaPagamentoModel.buscarPorId(id)
+  }
 }
 
 module.exports = FormaPagamentoService

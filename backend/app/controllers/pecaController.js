@@ -1,138 +1,214 @@
-const PecaService = require("../services/pecaService")
+const pecaService = require("../services/pecaService")
 
-class PecaController {
-  static async criar(req, res) {
-    try {
-      const { imagens, ...dadosPeca } = req.body
-      const peca = await PecaService.criarPeca(dadosPeca, imagens)
-      res.status(201).json({
-        success: true,
-        message: "Peça criada com sucesso",
-        data: peca,
-      })
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      })
-    }
+const list = async (req, res, next) => {
+  try {
+    const pecas = await pecaService.getAllPecas()
+    res.json({ success: true, data: pecas })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Ocorreu um erro interno no servidor.",
+      error: error.message,
+    })
   }
+}
 
-  static async buscarPorId(req, res) {
-    try {
-      const peca = await PecaService.buscarPecaPorId(req.params.id)
-      res.json({
-        success: true,
-        data: peca,
-      })
-    } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async listar(req, res) {
-    try {
-      const incluirInativos = req.query.incluir_inativos === "true"
-      const filtros = {
-        categoria_id: req.query.categoria_id,
-        marca_id: req.query.marca_id,
-        condicao: req.query.condicao,
-        estoque_baixo: req.query.estoque_baixo === "true",
-      }
-
-      const pecas = await PecaService.listarPecas(incluirInativos, filtros)
-      res.json({
-        success: true,
-        data: pecas,
-      })
-    } catch (error) {
+const getById = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const peca = await pecaService.buscarPecaPorId(id)
+    res.json({ success: true, data: peca })
+  } catch (error) {
+    if (error.message === "Peça não encontrada") {
+      res.status(404).json({ success: false, error: error.message })
+    } else {
       res.status(500).json({
         success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async atualizar(req, res) {
-    try {
-      const peca = await PecaService.atualizarPeca(req.params.id, req.body)
-      res.json({
-        success: true,
-        message: "Peça atualizada com sucesso",
-        data: peca,
-      })
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async inativar(req, res) {
-    try {
-      const resultado = await PecaService.inativarPeca(req.params.id)
-      res.json({
-        success: true,
-        message: resultado.message,
-      })
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async adicionarImagem(req, res) {
-    try {
-      const { imagem_url, descricao } = req.body
-      const imagem = await PecaService.adicionarImagemPeca(req.params.id, imagem_url, descricao)
-      res.status(201).json({
-        success: true,
-        message: "Imagem adicionada com sucesso",
-        data: imagem,
-      })
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async removerImagem(req, res) {
-    try {
-      const resultado = await PecaService.removerImagemPeca(req.params.id, req.params.imagemId)
-      res.json({
-        success: true,
-        message: resultado.message,
-      })
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      })
-    }
-  }
-
-  static async buscarImagens(req, res) {
-    try {
-      const imagens = await PecaService.buscarImagensPeca(req.params.id)
-      res.json({
-        success: true,
-        data: imagens,
-      })
-    } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
+        message: "Ocorreu um erro interno no servidor.",
+        error: error.message,
       })
     }
   }
 }
 
-module.exports = PecaController
+const create = async (req, res, next) => {
+  try {
+    console.log(" Controller: create chamado")
+    console.log(" Controller: req.user:", req.user)
+    console.log(" Controller: req.body:", req.body)
+
+    if (!req.user || !req.user.id) {
+      console.log(" Controller: usuário não autenticado")
+      return res.status(401).json({
+        success: false,
+        error: "Usuário não autenticado",
+      })
+    }
+
+    const requiredFields = ["nome", "preco_venda", "preco_compra", "estoque_minimo"]
+    const missingFields = []
+
+    // Check for missing required fields
+    requiredFields.forEach((field) => {
+      if (!req.body[field] || req.body[field] === "" || req.body[field] === null || req.body[field] === undefined) {
+        switch (field) {
+          case "nome":
+            missingFields.push("Nome da peça é obrigatório")
+            break
+          case "preco_venda":
+            missingFields.push("Preço de venda é obrigatório")
+            break
+          case "preco_compra":
+            missingFields.push("Preço de custo é obrigatório")
+            break
+          case "estoque_minimo":
+            missingFields.push("Quantidade mínima é obrigatória")
+            break
+        }
+      }
+    })
+
+    console.log(" Controller: campos faltando:", missingFields)
+
+    if (missingFields.length > 0) {
+      console.log("Controller: validação falhou, retornando erro 400")
+      return res.status(400).json({
+        success: false,
+        error: "Dados inválidos",
+        details: missingFields,
+      })
+    }
+
+    const pecaData = {
+      ...req.body,
+      created_by: req.user.id,
+    }
+
+    console.log(" Controller: chamando pecaService.criarPeca com dados:", pecaData)
+
+    const result = await pecaService.criarPeca(pecaData)
+
+    console.log(" Controller: peça criada com sucesso, result:", result)
+
+    res.status(201).json({ success: true, data: result, message: "Peça criada com sucesso" })
+  } catch (error) {
+    console.error(" Controller: erro ao criar peça:", error)
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
+const update = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        error: "Usuário não autenticado",
+      })
+    }
+
+    const pecaData = {
+      ...req.body,
+      updated_by: req.user.id,
+    }
+
+    const result = await pecaService.atualizarPeca(req.params.id, pecaData)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
+const remove = async (req, res, next) => {
+  try {
+    const result = await pecaService.inativarPeca(req.params.id)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(404).json({ success: false, error: error.message })
+  }
+}
+
+const toggleStatus = async (req, res, next) => {
+  try {
+    console.log(" Controller: toggleStatus chamado")
+    console.log(" Controller: req.params:", req.params)
+    console.log(" Controller: req.body:", req.body)
+
+    const { id } = req.params
+    const { status } = req.body
+
+    let statusValue
+    if (status === "ativo" || status === true || status === 1 || status === "1") {
+      statusValue = true
+    } else if (status === "inativo" || status === false || status === 0 || status === "0") {
+      statusValue = false
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetro "status" deve ser "ativo", "inativo", boolean, 0 ou 1',
+      })
+    }
+
+    console.log(" Controller: statusValue convertido:", statusValue)
+    const pecaAtualizada = await pecaService.toggleStatusWithValue(id, statusValue)
+    console.log(" Controller: peça atualizada:", pecaAtualizada)
+
+    res.json({ success: true, data: pecaAtualizada })
+  } catch (error) {
+    console.error(" Controller: erro ao alternar status:", error)
+    res.status(500).json({
+      success: false,
+      error: error.message || "Erro interno do servidor",
+    })
+  }
+}
+
+const vincularImagem = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { imagem_id } = req.body
+
+    if (!imagem_id) {
+      return res.status(400).json({
+        success: false,
+        error: "imagem_id é obrigatório",
+      })
+    }
+
+    const result = await pecaService.vincularImagemPeca(id, imagem_id)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
+const buscarImagens = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const imagens = await pecaService.buscarImagensPeca(id)
+    res.json({ success: true, data: imagens })
+  } catch (error) {
+    res.status(404).json({ success: false, error: error.message })
+  }
+}
+
+const removerImagem = async (req, res, next) => {
+  try {
+    const { id, imagemId } = req.params
+    const result = await pecaService.removerImagemPeca(id, imagemId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
+module.exports = {
+  list,
+  getById,
+  create,
+  update,
+  remove,
+  toggleStatus,
+  vincularImagem,
+  buscarImagens,
+  removerImagem,
+}

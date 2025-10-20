@@ -23,6 +23,10 @@ class PecaService {
 
     const pecaId = await PecaModel.criar(dadosPeca)
 
+    if (dadosPeca.imagem_principal_id) {
+      await PecaModel.adicionarImagem(pecaId, dadosPeca.imagem_principal_id)
+    }
+
     // Adicionar imagens se fornecidas
     if (imagens && imagens.length > 0) {
       for (const imagemUrl of imagens) {
@@ -138,6 +142,66 @@ class PecaService {
     }
 
     return await PecaModel.buscarImagensPeca(pecaId)
+  }
+
+  static async toggleStatus(id) {
+    const peca = await PecaModel.buscarPorId(id)
+    if (!peca) {
+      throw new Error("Peça não encontrada")
+    }
+
+    const novoStatus = !peca.status
+    const sucesso = await PecaModel.updateStatus(id, novoStatus)
+
+    if (!sucesso) {
+      throw new Error("Erro ao alterar status da peça")
+    }
+
+    const pecaAtualizada = await PecaModel.buscarPorId(id)
+    return {
+      message: `Peça ${novoStatus ? "ativada" : "inativada"} com sucesso`,
+      peca: pecaAtualizada,
+    }
+  }
+
+  static async toggleStatusWithValue(id, statusValue) {
+    const peca = await PecaModel.buscarPorId(id)
+    if (!peca) {
+      throw new Error("Peça não encontrada")
+    }
+
+    const sucesso = await PecaModel.updateStatus(id, statusValue)
+
+    if (!sucesso) {
+      throw new Error("Erro ao alterar status da peça")
+    }
+
+    const pecaAtualizada = await PecaModel.buscarPorId(id)
+    return {
+      message: `Peça ${statusValue ? "ativada" : "inativada"} com sucesso`,
+      peca: pecaAtualizada,
+    }
+  }
+
+  static async getAllPecas() {
+    const result = await PecaModel.buscarTodos(true)
+    return result
+  }
+
+  static async vincularImagemPeca(pecaId, imagemId) {
+    const peca = await PecaModel.buscarPorId(pecaId)
+    if (!peca) {
+      throw new Error("Peça não encontrada")
+    }
+
+    const imagem = await ImagemModel.buscarPorId(imagemId)
+    if (!imagem) {
+      throw new Error("Imagem não encontrada")
+    }
+
+    await PecaModel.adicionarImagem(pecaId, imagemId)
+
+    return { message: "Imagem vinculada com sucesso" }
   }
 }
 

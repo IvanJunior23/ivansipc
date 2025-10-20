@@ -1,34 +1,19 @@
 const { pool } = require("../../config/database")
 
 const findAll = async () => {
-  const query = `
-        SELECT u.usuario_id, p.nome, u.email, u.tipo_usuario, u.status
-        FROM usuario u
-        JOIN pessoa p ON u.pessoa_id = p.pessoa_id
-        ORDER BY p.nome;
-    `
+  const query = `SELECT u.usuario_id as id, u.pessoa_id, p.nome, u.email, u.tipo_usuario as tipo, u.status as ativo FROM usuario u JOIN pessoa p ON u.pessoa_id = p.pessoa_id ORDER BY p.nome;`
   const [users] = await pool.execute(query)
   return users
 }
 
 const findByEmail = async (email) => {
-  const query = `
-        SELECT u.*, p.nome
-        FROM usuario u
-        JOIN pessoa p ON u.pessoa_id = p.pessoa_id
-        WHERE u.email = ?;
-    `
+  const query = `SELECT u.*, p.nome FROM usuario u JOIN pessoa p ON u.pessoa_id = p.pessoa_id WHERE u.email = ?;`
   const [rows] = await pool.execute(query, [email])
   return rows[0]
 }
 
 const findById = async (id) => {
-  const query = `
-        SELECT u.usuario_id, p.nome, u.email, u.tipo_usuario, u.status
-        FROM usuario u
-        JOIN pessoa p ON u.pessoa_id = p.pessoa_id
-        WHERE u.usuario_id = ?;
-    `
+  const query = `SELECT u.usuario_id, u.pessoa_id, p.nome, u.email, u.tipo_usuario, u.status FROM usuario u JOIN pessoa p ON u.pessoa_id = p.pessoa_id WHERE u.usuario_id = ?;`
   const [rows] = await pool.execute(query, [id])
   return rows[0]
 }
@@ -36,38 +21,47 @@ const findById = async (id) => {
 const create = async (userData, connection) => {
   const conn = connection || pool // Usa a conexão da transação ou o pool
 
-  // 1. Inserir na tabela pessoa
-  const pessoaQuery = "INSERT INTO pessoa (nome) VALUES (?)"
-  const [pessoaResult] = await conn.execute(pessoaQuery, [userData.nome])
-  const pessoaId = pessoaResult.insertId
-
-  // 2. Inserir na tabela usuario
-  const { email, senhaCriptografada, tipo_usuario } = userData
-  const usuarioQuery = "INSERT INTO usuario (pessoa_id, email, senha, tipo_usuario) VALUES (?, ?, ?, ?)"
-  const [usuarioResult] = await conn.execute(usuarioQuery, [pessoaId, email, senhaCriptografada, tipo_usuario])
+  const { pessoa_id, email, senhaCriptografada, tipo_usuario } = userData
+  const usuarioQuery = "INSERT INTO usuario (pessoa_id, email, senha, tipo_usuario, status) VALUES (?, ?, ?, ?, TRUE)"
+  const [usuarioResult] = await conn.execute(usuarioQuery, [pessoa_id, email, senhaCriptografada, tipo_usuario])
 
   return usuarioResult.insertId
 }
 
 const update = async (id, userData, connection) => {
   const conn = connection || pool
-  const { nome, email, tipo_usuario, senhaCriptografada } = userData
+  const { pessoa_id, email, tipo_usuario, senhaCriptografada } = userData
 
-  // 1. Obter o pessoa_id a partir do usuario_id
+  // Verificar se o usuário existe
   const [userRows] = await conn.execute("SELECT pessoa_id FROM usuario WHERE usuario_id = ?", [id])
   if (userRows.length === 0) {
     throw new Error("Usuário não encontrado")
   }
-  const pessoaId = userRows[0].pessoa_id
 
-  // 2. Atualizar a tabela pessoa
-  if (nome) {
-    await conn.execute("UPDATE pessoa SET nome = ? WHERE pessoa_id = ?", [nome, pessoaId])
+  // Se pessoa_id foi fornecido, verificar se a pessoa existe e não está sendo usada por outro usuário
+  if (pessoa_id && pessoa_id !== userRows[0].pessoa_id) {
+    const [pessoaRows] = await conn.execute("SELECT * FROM pessoa WHERE pessoa_id = ? AND ativo = TRUE", [pessoa_id])
+    if (pessoaRows.length === 0) {
+      throw new Error("Pessoa não encontrada ou inativa")
+    }
+
+    const [usuarioExistente] = await conn.execute("SELECT * FROM usuario WHERE pessoa_id = ? AND usuario_id != ?", [
+      pessoa_id,
+      id,
+    ])
+    if (usuarioExistente.length > 0) {
+      throw new Error("Esta pessoa já possui outro usuário associado")
+    }
   }
 
-  // 3. Atualizar a tabela usuario
+  // Atualizar a tabela usuario
   const userFields = []
   const userValues = []
+
+  if (pessoa_id) {
+    userFields.push("pessoa_id = ?")
+    userValues.push(pessoa_id)
+  }
   if (email) {
     userFields.push("email = ?")
     userValues.push(email)

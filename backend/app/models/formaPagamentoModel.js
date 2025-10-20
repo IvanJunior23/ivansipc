@@ -1,4 +1,4 @@
-const db = require("../../config/database")
+const { db } = require("../../config/database")
 
 class FormaPagamentoModel {
   static async criar(formaPagamento) {
@@ -43,6 +43,18 @@ class FormaPagamentoModel {
   static async inativar(id) {
     const query = "UPDATE forma_pagamento SET status = false WHERE forma_pagamento_id = ?"
     const [result] = await db.execute(query, [id])
+    return result.affectedRows > 0
+  }
+
+  static async ativar(id) {
+    const query = "UPDATE forma_pagamento SET status = true WHERE forma_pagamento_id = ?"
+    const [result] = await db.execute(query, [id])
+    return result.affectedRows > 0
+  }
+
+  static async toggleStatus(id, status) {
+    const query = "UPDATE forma_pagamento SET status = ? WHERE forma_pagamento_id = ?"
+    const [result] = await db.execute(query, [status, id])
     return result.affectedRows > 0
   }
 

@@ -5,12 +5,12 @@ const PecaModel = require("../models/pecaModel")
 
 class CompraService {
   static async criarCompra(dadosCompra, itens) {
-    const { fornecedor_id, usuario_id, data_compra } = dadosCompra
+    const { fornecedor_id, usuario_id, data_compra, observacoes } = dadosCompra
 
     // Validar fornecedor
     const fornecedor = await FornecedorModel.buscarPorId(fornecedor_id)
-    if (!fornecedor || !fornecedor.status) {
-      throw new Error("Fornecedor não encontrado ou inativo")
+    if (!fornecedor) {
+      throw new Error("Fornecedor não encontrado")
     }
 
     // Validar itens e calcular valor total
@@ -22,8 +22,8 @@ class CompraService {
     for (const item of itens) {
       // Validar peça
       const peca = await PecaModel.buscarPorId(item.peca_id)
-      if (!peca || !peca.status) {
-        throw new Error(`Peça com ID ${item.peca_id} não encontrada ou inativa`)
+      if (!peca) {
+        throw new Error(`Peça com ID ${item.peca_id} não encontrada`)
       }
 
       // Validar quantidade
@@ -42,10 +42,11 @@ class CompraService {
     // Criar compra
     const compraId = await CompraModel.criar({
       fornecedor_id,
-      usuario_id,
+      usuario_id: usuario_id || 1, // Default to user 1 if not provided
       data_compra: data_compra || new Date().toISOString().split("T")[0],
       valor_total: valorTotal,
       status: "pendente",
+      observacoes: observacoes || null,
     })
 
     // Criar itens da compra
@@ -94,8 +95,8 @@ class CompraService {
     // Validar fornecedor se fornecido
     if (fornecedor_id) {
       const fornecedor = await FornecedorModel.buscarPorId(fornecedor_id)
-      if (!fornecedor || !fornecedor.status) {
-        throw new Error("Fornecedor não encontrado ou inativo")
+      if (!fornecedor) {
+        throw new Error("Fornecedor não encontrado")
       }
     }
 
@@ -109,8 +110,8 @@ class CompraService {
       valorTotal = 0
       for (const item of itens) {
         const peca = await PecaModel.buscarPorId(item.peca_id)
-        if (!peca || !peca.status) {
-          throw new Error(`Peça com ID ${item.peca_id} não encontrada ou inativa`)
+        if (!peca) {
+          throw new Error(`Peça com ID ${item.peca_id} não encontrada`)
         }
 
         if (!item.quantidade || item.quantidade <= 0) {

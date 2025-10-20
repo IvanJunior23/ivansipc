@@ -401,56 +401,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function buildDynamicMenu(userType) {
-    const PERMISSIONS = {
-      admin: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Categorias", icon: "fas fa-tags", url: "categorias.html" },
-        { name: "Marcas", icon: "fas fa-copyright", url: "marcas.html" },
-        { name: "Peças", icon: "fas fa-microchip", url: "pecas.html" },
-        { name: "Clientes", icon: "fas fa-users", url: "clientes.html" },
-        { name: "Fornecedores", icon: "fas fa-truck", url: "fornecedores.html" },
-        { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
-        { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
-        { name: "Trocas", icon: "fas fa-exchange-alt", url: "trocas.html" },
-        { name: "Alertas", icon: "fas fa-bell", url: "alertas.html" },
-        { name: "Relatórios", icon: "fas fa-chart-bar", url: "relatorios.html", active: true },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-        { name: "Usuários", icon: "fas fa-user-cog", url: "usuarios.html" },
-        { name: "Contatos", icon: "fas fa-address-book", url: "contatos.html" },
-        { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" },
-      ],
-      vendedor: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Clientes", icon: "fas fa-users", url: "clientes.html" },
-        { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-      ],
-      estoque: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Categorias", icon: "fas fa-tags", url: "categorias.html" },
-        { name: "Marcas", icon: "fas fa-copyright", url: "marcas.html" },
-        { name: "Peças", icon: "fas fa-microchip", url: "pecas.html" },
-        { name: "Fornecedores", icon: "fas fa-truck", url: "fornecedores.html" },
-        { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
-        { name: "Alertas", icon: "fas fa-bell", url: "alertas.html" },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-      ],
-    }
-
-    const sidebar = document.getElementById("sidebar-menu")
-    const normalizedType = userType.toLowerCase().trim()
-    const permissions = PERMISSIONS[normalizedType] || PERMISSIONS.vendedor
-
-    sidebar.innerHTML = ""
-    permissions.forEach((item) => {
-      const link = document.createElement("a")
-      link.href = item.url
-      link.innerHTML = `<i class="${item.icon}"></i> ${item.name}`
-      if (item.active) link.classList.add("active")
-      sidebar.appendChild(link)
-    })
-  }
 
   function updateUserInfo(user) {
     const userNameEl = document.querySelector(".user-name")

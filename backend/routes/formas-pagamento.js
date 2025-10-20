@@ -12,5 +12,6 @@ router.get("/", FormaPagamentoController.listar)
 router.get("/:id", FormaPagamentoController.buscarPorId)
 router.put("/:id", validarFormaPagamento, FormaPagamentoController.atualizar)
 router.delete("/:id", FormaPagamentoController.inativar)
+router.patch("/:id/status", FormaPagamentoController.toggleStatus)
 
 module.exports = router

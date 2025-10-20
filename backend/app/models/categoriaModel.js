@@ -1,56 +1,58 @@
-const db = require("../../config/database")
+const { pool } = require("../../config/database")
 
-class CategoriaModel {
-  static async criar(categoria) {
-    const query = `
-            INSERT INTO categoria (nome, descricao, status) 
-            VALUES (?, ?, ?)
-        `
-    const [result] = await db.execute(query, [
-      categoria.nome,
-      categoria.descricao || null,
-      categoria.status !== undefined ? categoria.status : true,
-    ])
-    return result.insertId
-  }
-
-  static async buscarPorId(id) {
-    const query = "SELECT * FROM categoria WHERE categoria_id = ?"
-    const [rows] = await db.execute(query, [id])
-    return rows[0]
-  }
-
-  static async buscarTodos(incluirInativos = false) {
-    let query = "SELECT * FROM categoria"
-    if (!incluirInativos) {
-      query += " WHERE status = true"
-    }
-    query += " ORDER BY nome"
-    const [rows] = await db.execute(query)
-    return rows
-  }
-
-  static async atualizar(id, categoria) {
-    const query = `
-            UPDATE categoria 
-            SET nome = ?, descricao = ?, status = ?
-            WHERE categoria_id = ?
-        `
-    const [result] = await db.execute(query, [categoria.nome, categoria.descricao, categoria.status, id])
-    return result.affectedRows > 0
-  }
-
-  static async inativar(id) {
-    const query = "UPDATE categoria SET status = false WHERE categoria_id = ?"
-    const [result] = await db.execute(query, [id])
-    return result.affectedRows > 0
-  }
-
-  static async buscarPorNome(nome) {
-    const query = "SELECT * FROM categoria WHERE nome = ?"
-    const [rows] = await db.execute(query, [nome])
-    return rows[0]
-  }
+const findAll = async () => {
+  const [rows] = await pool.execute(`
+        SELECT categoria_id, nome, descricao, status, 
+               created_at, updated_at, created_by, updated_by
+        FROM categoria 
+        ORDER BY nome
+    `)
+  return rows
 }
 
-module.exports = CategoriaModel
+const buscarPorId = async (id) => {
+  const [rows] = await pool.execute(
+    `
+        SELECT categoria_id, nome, descricao, status, 
+               created_at, updated_at, created_by, updated_by
+        FROM categoria 
+        WHERE categoria_id = ?
+    `,
+    [id],
+  )
+  return rows[0]
+}
+
+const create = async (categoryData) => {
+  const { nome, descricao, created_by } = categoryData
+  const query = `
+        INSERT INTO categoria (nome, descricao, status, created_by) 
+        VALUES (?, ?, TRUE, ?)
+    `
+  const [result] = await pool.execute(query, [nome, descricao, created_by])
+  return { id: result.insertId }
+}
+
+const update = async (id, categoryData) => {
+  const { nome, descricao, updated_by } = categoryData
+  const query = `
+        UPDATE categoria 
+        SET nome=?, descricao=?, updated_by=?, updated_at=CURRENT_TIMESTAMP 
+        WHERE categoria_id = ?
+    `
+  const [result] = await pool.execute(query, [nome, descricao, updated_by, id])
+  return result
+}
+
+const remove = async (id) => {
+  const [result] = await pool.execute("UPDATE categoria SET status = FALSE WHERE categoria_id = ?", [id])
+  return result
+}
+
+const updateStatus = async (id, status) => {
+  const query = "UPDATE categoria SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE categoria_id = ?"
+  const [result] = await pool.execute(query, [status, id])
+  return result
+}
+
+module.exports = { findAll, buscarPorId, create, update, remove, updateStatus }

@@ -1,53 +1,57 @@
 const FornecedorModel = require("../models/fornecedorModel")
 const PessoaModel = require("../models/pessoaModel")
-const ContatoModel = require("../models/contatoModel")
-const EnderecoModel = require("../models/enderecoModel")
-const db = require("../../config/database")
+const { pool } = require("../../config/database")
 
 class FornecedorService {
   static async criarFornecedor(dadosFornecedor) {
-    const connection = await db.getConnection()
+    console.log(" 🔍 Service criarFornecedor - Dados recebidos:", dadosFornecedor)
+
+    const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
 
-      const { nome, cnpj, contato, endereco } = dadosFornecedor
+      const { pessoa_id, cnpj, created_by } = dadosFornecedor
+
+      console.log(" 🔍 Service - pessoa_id:", pessoa_id, "tipo:", typeof pessoa_id)
+      console.log(" 🔍 Service - cnpj:", cnpj, "tipo:", typeof cnpj)
+      console.log(" 🔍 Service - created_by:", created_by, "tipo:", typeof created_by)
+
+      // Verificar se pessoa existe e está ativa
+      const pessoa = await PessoaModel.buscarPorId(pessoa_id)
+      if (!pessoa) {
+        throw new Error("Pessoa não encontrada ou inativa")
+      }
+      console.log(" ✅ Service - Pessoa encontrada:", pessoa.nome)
+
+      // Verificar se pessoa já tem fornecedor associado
+      const fornecedorExistente = await FornecedorModel.buscarPorPessoaId(pessoa_id)
+      if (fornecedorExistente) {
+        throw new Error("Esta pessoa já possui um fornecedor associado")
+      }
+      console.log(" ✅ Service - Pessoa não tem fornecedor associado")
 
       // Verificar se CNPJ já existe
-      const fornecedorExistente = await FornecedorModel.buscarPorCnpj(cnpj)
-      if (fornecedorExistente) {
-        throw new Error("Fornecedor com este CNPJ já existe")
+      const cnpjExistente = await FornecedorModel.buscarPorCnpj(cnpj)
+      if (cnpjExistente) {
+        throw new Error("Este CNPJ já está cadastrado")
       }
+      console.log(" ✅ Service - CNPJ disponível")
 
-      // Criar contato se fornecido
-      let contatoId = null
-      if (contato) {
-        const contatoResult = await ContatoModel.create(contato)
-        contatoId = contatoResult.id
-      }
-
-      // Criar endereço se fornecido
-      let enderecoId = null
-      if (endereco) {
-        const enderecoResult = await EnderecoModel.create(endereco)
-        enderecoId = enderecoResult.id
-      }
-
-      // Criar pessoa
-      const pessoaId = await PessoaModel.criar({
-        nome,
-        contato_id: contatoId,
-        endereco_id: enderecoId,
-      })
-
-      // Criar fornecedor
+      // Criar fornecedor (status TRUE por padrão no banco)
+      console.log(" 🔄 Service - Chamando Model.criar com:", { pessoa_id, cnpj, created_by })
       const fornecedorId = await FornecedorModel.criar({
-        pessoa_id: pessoaId,
+        pessoa_id,
         cnpj,
+        created_by,
       })
+      console.log(" ✅ Service - Fornecedor criado com ID:", fornecedorId)
 
       await connection.commit()
+      console.log(" ✅ Service - Transação commitada")
+
       return await FornecedorModel.buscarPorId(fornecedorId)
     } catch (error) {
+      console.log(" ❌ Service - Erro:", error.message)
       await connection.rollback()
       throw error
     } finally {
@@ -68,7 +72,7 @@ class FornecedorService {
   }
 
   static async atualizarFornecedor(id, dadosFornecedor) {
-    const connection = await db.getConnection()
+    const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
 
@@ -77,53 +81,19 @@ class FornecedorService {
         throw new Error("Fornecedor não encontrado")
       }
 
-      const { nome, cnpj, contato, endereco } = dadosFornecedor
+      const { cnpj, updated_by } = dadosFornecedor
 
-      // Verificar se outro fornecedor já usa este CNPJ
+      // Verificar se CNPJ já existe em outro fornecedor
       if (cnpj !== fornecedorExistente.cnpj) {
-        const fornecedorComMesmoCnpj = await FornecedorModel.buscarPorCnpj(cnpj)
-        if (fornecedorComMesmoCnpj && fornecedorComMesmoCnpj.fornecedor_id !== Number.parseInt(id)) {
-          throw new Error("Fornecedor com este CNPJ já existe")
+        const cnpjExistente = await FornecedorModel.buscarPorCnpj(cnpj)
+        if (cnpjExistente && cnpjExistente.fornecedor_id !== id) {
+          throw new Error("Este CNPJ já está cadastrado em outro fornecedor")
         }
       }
 
-      let contatoId = fornecedorExistente.contato_id
-      let enderecoId = fornecedorExistente.endereco_id
-
-      // Atualizar ou criar contato
-      if (contato) {
-        if (contatoId) {
-          await ContatoModel.update(contatoId, contato)
-        } else {
-          const contatoResult = await ContatoModel.create(contato)
-          contatoId = contatoResult.id
-        }
-      }
-
-      // Atualizar ou criar endereço
-      if (endereco) {
-        if (enderecoId) {
-          await EnderecoModel.update(enderecoId, endereco)
-        } else {
-          const enderecoResult = await EnderecoModel.create(endereco)
-          enderecoId = enderecoResult.id
-        }
-      }
-
-      // Atualizar pessoa
-      if (nome || contatoId !== fornecedorExistente.contato_id || enderecoId !== fornecedorExistente.endereco_id) {
-        await PessoaModel.atualizar(fornecedorExistente.pessoa_id, {
-          nome: nome || fornecedorExistente.nome,
-          contato_id: contatoId,
-          endereco_id: enderecoId,
-          status: fornecedorExistente.pessoa_status,
-        })
-      }
-
-      // Atualizar fornecedor
       const sucesso = await FornecedorModel.atualizar(id, {
         cnpj,
-        status: dadosFornecedor.status !== undefined ? dadosFornecedor.status : fornecedorExistente.status,
+        updated_by,
       })
 
       if (!sucesso) {
@@ -141,7 +111,7 @@ class FornecedorService {
   }
 
   static async inativarFornecedor(id) {
-    const connection = await db.getConnection()
+    const connection = await pool.getConnection()
     try {
       await connection.beginTransaction()
 
@@ -163,6 +133,55 @@ class FornecedorService {
     } finally {
       connection.release()
     }
+  }
+
+  static async ativarFornecedor(id) {
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+
+      const fornecedor = await FornecedorModel.buscarPorId(id)
+      if (!fornecedor) {
+        throw new Error("Fornecedor não encontrado")
+      }
+
+      const sucesso = await FornecedorModel.ativar(id)
+      if (!sucesso) {
+        throw new Error("Erro ao ativar fornecedor")
+      }
+
+      await connection.commit()
+      return { message: "Fornecedor ativado com sucesso" }
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+
+  static async updateFornecedorStatus(id, status) {
+    console.log("🔄 Service: alterando apenas status do fornecedor ID:", id, "para:", status)
+
+    const fornecedorExiste = await FornecedorModel.buscarPorId(id)
+
+    if (!fornecedorExiste) {
+      throw new Error("Fornecedor não encontrado")
+    }
+
+    const novoStatus = status === true || status === 1 || status === "1" ? 1 : 0
+    console.log("🔄 Service: convertendo status para:", novoStatus)
+
+    const result = await FornecedorModel.updateStatus(id, novoStatus)
+
+    if (!result) {
+      throw new Error("Erro ao atualizar status do fornecedor")
+    }
+
+    const fornecedorAtualizado = await FornecedorModel.buscarPorId(id)
+
+    console.log("✅ Service: status alterado com sucesso:", fornecedorAtualizado)
+    return fornecedorAtualizado
   }
 }
 

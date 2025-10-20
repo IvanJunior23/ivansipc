@@ -43,6 +43,58 @@ class AlertaService {
       throw new Error(`Erro ao contar alertas: ${error.message}`)
     }
   }
+
+  // Resolver alerta
+  static async resolverAlerta(alertaId, usuarioId) {
+    try {
+      const alerta = await AlertaModel.buscarPorId(alertaId)
+      if (!alerta) {
+        throw new Error("Alerta não encontrado")
+      }
+
+      if (alerta.status === "Resolvido") {
+        throw new Error("Alerta já foi resolvido")
+      }
+
+      const sucesso = await AlertaModel.resolver(alertaId, usuarioId)
+      if (!sucesso) {
+        throw new Error("Erro ao resolver alerta")
+      }
+
+      return {
+        message: "Alerta resolvido com sucesso",
+        data: await AlertaModel.buscarPorId(alertaId),
+      }
+    } catch (error) {
+      throw new Error(`Erro ao resolver alerta: ${error.message}`)
+    }
+  }
+
+  // Dispensar alerta
+  static async dispensarAlerta(alertaId, usuarioId) {
+    try {
+      const alerta = await AlertaModel.buscarPorId(alertaId)
+      if (!alerta) {
+        throw new Error("Alerta não encontrado")
+      }
+
+      if (alerta.status === "Resolvido") {
+        throw new Error("Alerta já foi resolvido")
+      }
+
+      const sucesso = await AlertaModel.dispensar(alertaId, usuarioId)
+      if (!sucesso) {
+        throw new Error("Erro ao dispensar alerta")
+      }
+
+      return {
+        message: "Alerta dispensado com sucesso",
+        data: await AlertaModel.buscarPorId(alertaId),
+      }
+    } catch (error) {
+      throw new Error(`Erro ao dispensar alerta: ${error.message}`)
+    }
+  }
 }
 
 module.exports = AlertaService

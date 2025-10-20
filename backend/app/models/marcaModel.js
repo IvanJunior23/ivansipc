@@ -1,56 +1,71 @@
-const db = require("../../config/database")
+const { pool } = require("../../config/database")
 
-class MarcaModel {
-  static async criar(marca) {
-    const query = `
-            INSERT INTO marca (nome, descricao, status) 
-            VALUES (?, ?, ?)
-        `
-    const [result] = await db.execute(query, [
-      marca.nome,
-      marca.descricao || null,
-      marca.status !== undefined ? marca.status : true,
-    ])
-    return result.insertId
-  }
+const findAll = async () => {
+  console.log(" Model: marcaModel.findAll() chamado")
+  console.log(" Model: executando query para buscar todas as marcas")
 
-  static async buscarPorId(id) {
-    const query = "SELECT * FROM marca WHERE marca_id = ?"
-    const [rows] = await db.execute(query, [id])
-    return rows[0]
-  }
+  const query = `
+    SELECT marca_id, nome, descricao, status, 
+           created_at, updated_at, created_by, updated_by
+    FROM marca 
+    ORDER BY nome
+  `
 
-  static async buscarTodos(incluirInativos = false) {
-    let query = "SELECT * FROM marca"
-    if (!incluirInativos) {
-      query += " WHERE status = true"
-    }
-    query += " ORDER BY nome"
-    const [rows] = await db.execute(query)
+  console.log(" Model: query:", query)
+
+  try {
+    const [rows] = await pool.execute(query)
+    console.log(" Model: marcas encontradas:", rows.length)
     return rows
-  }
-
-  static async atualizar(id, marca) {
-    const query = `
-            UPDATE marca 
-            SET nome = ?, descricao = ?, status = ?
-            WHERE marca_id = ?
-        `
-    const [result] = await db.execute(query, [marca.nome, marca.descricao, marca.status, id])
-    return result.affectedRows > 0
-  }
-
-  static async inativar(id) {
-    const query = "UPDATE marca SET status = false WHERE marca_id = ?"
-    const [result] = await db.execute(query, [id])
-    return result.affectedRows > 0
-  }
-
-  static async buscarPorNome(nome) {
-    const query = "SELECT * FROM marca WHERE nome = ?"
-    const [rows] = await db.execute(query, [nome])
-    return rows[0]
+  } catch (error) {
+    console.error(" Model: erro ao buscar marcas:", error)
+    throw error
   }
 }
 
-module.exports = MarcaModel
+const buscarPorId = async (id) => {
+  const [rows] = await pool.execute(
+    `
+        SELECT marca_id, nome, descricao, status, 
+               created_at, updated_at, created_by, updated_by
+        FROM marca 
+        WHERE marca_id = ?
+    `,
+    [id],
+  )
+  return rows[0]
+}
+
+const create = async (marcaData) => {
+  const { nome, descricao, created_by } = marcaData
+  const query = `
+        INSERT INTO marca (nome, descricao, status, created_by) 
+        VALUES (?, ?, TRUE, ?)
+    `
+  const [result] = await pool.execute(query, [nome, descricao, created_by])
+  return { id: result.insertId }
+}
+
+const update = async (id, marcaData) => {
+  const { nome, descricao, updated_by } = marcaData
+  const query = `
+        UPDATE marca 
+        SET nome=?, descricao=?, updated_by=?, updated_at=CURRENT_TIMESTAMP 
+        WHERE marca_id = ?
+    `
+  const [result] = await pool.execute(query, [nome, descricao, updated_by, id])
+  return result
+}
+
+const remove = async (id) => {
+  const [result] = await pool.execute("UPDATE marca SET status = FALSE WHERE marca_id = ?", [id])
+  return result
+}
+
+const updateStatus = async (id, status) => {
+  const query = "UPDATE marca SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE marca_id = ?"
+  const [result] = await pool.execute(query, [status, id])
+  return result
+}
+
+module.exports = { findAll, buscarPorId, create, update, remove, updateStatus }

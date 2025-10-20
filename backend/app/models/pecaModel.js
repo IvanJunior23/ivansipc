@@ -1,168 +1,317 @@
-const db = require("../../config/database")
+const { pool } = require("../../config/database")
 
-class PecaModel {
-  static async criar(peca) {
-    const connection = await db.getConnection()
-    try {
-      await connection.beginTransaction()
+const toNullIfEmpty = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null
+  }
+  return value
+}
 
-      const query = `
-                INSERT INTO peca (nome, descricao, marca_id, preco_venda, preco_custo, 
-                                quantidade_estoque, quantidade_minima, categoria_id, condicao, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `
-      const [result] = await connection.execute(query, [
-        peca.nome,
-        peca.descricao || null,
-        peca.marca_id || null,
-        peca.preco_venda,
-        peca.preco_custo,
-        peca.quantidade_estoque || 0,
-        peca.quantidade_minima,
-        peca.categoria_id || null,
-        peca.condicao || "novo",
-        peca.status !== undefined ? peca.status : true,
-      ])
+const findAll = async () => {
+  // Buscar TODAS as peças (ativas e inativas) para permitir gerenciamento
+  const [rows] = await pool.execute(`
+        SELECT p.peca_id, p.nome, p.descricao, p.marca_id, p.preco_venda, p.preco_custo,
+               p.quantidade_estoque, p.quantidade_minima, p.categoria_id, p.condicao, p.status,
+               p.data_cadastro, p.updated_at, p.created_by, p.updated_by,
+               c.nome as categoria_nome, m.nome as marca_nome
+        FROM peca p
+        LEFT JOIN categoria c ON p.categoria_id = c.categoria_id
+        LEFT JOIN marca m ON p.marca_id = m.marca_id
+        ORDER BY p.nome
+    `)
+  return rows
+}
 
-      await connection.commit()
-      return result.insertId
-    } catch (error) {
-      await connection.rollback()
-      throw error
-    } finally {
-      connection.release()
-    }
+const create = async (pecaData) => {
+  console.log(" Model: criar chamado com pecaData:", pecaData)
+
+  const {
+    nome,
+    descricao,
+    marca_id,
+    preco_venda,
+    preco_custo,
+    preco_compra,
+    quantidade_estoque,
+    quantidade_minima,
+    estoque_minimo,
+    categoria_id,
+    condicao,
+    status,
+    created_by,
+    codigo,
+    localizacao,
+  } = pecaData
+
+  const precoCompra = preco_custo || preco_compra
+  const estoqueMinimo = quantidade_minima || estoque_minimo
+
+  let statusValue = true // default to active
+  if (status === "inativo" || status === false || status === 0 || status === "0") {
+    statusValue = false
   }
 
-  static async buscarPorId(id) {
-    const query = `
-            SELECT p.*, 
-                   c.nome as categoria_nome,
-                   m.nome as marca_nome,
-                   GROUP_CONCAT(i.referencia_url) as imagens
-            FROM peca p
-            LEFT JOIN categoria c ON p.categoria_id = c.categoria_id
-            LEFT JOIN marca m ON p.marca_id = m.marca_id
-            LEFT JOIN peca_imagem pi ON p.peca_id = pi.peca_id
-            LEFT JOIN imagem i ON pi.imagem_id = i.imagem_id AND i.status = true
-            WHERE p.peca_id = ?
-            GROUP BY p.peca_id
-        `
-    const [rows] = await db.execute(query, [id])
-    if (rows[0] && rows[0].imagens) {
-      rows[0].imagens = rows[0].imagens.split(",")
-    }
-    return rows[0]
+  console.log(" Model: valores mapeados:")
+  console.log(" Model: preco_custo:", precoCompra)
+  console.log(" Model: quantidade_minima:", estoqueMinimo)
+  console.log(" Model: status:", statusValue)
+
+  const query = `
+        INSERT INTO peca (nome, descricao, marca_id, preco_venda, preco_custo, 
+                         quantidade_estoque, quantidade_minima, categoria_id, condicao, 
+                         status, created_by, codigo, localizacao) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+
+  console.log(" Model: executando query:", query)
+
+  const params = [
+    nome,
+    toNullIfEmpty(descricao),
+    toNullIfEmpty(marca_id),
+    preco_venda,
+    toNullIfEmpty(precoCompra),
+    quantidade_estoque || 0,
+    toNullIfEmpty(estoqueMinimo),
+    toNullIfEmpty(categoria_id),
+    condicao || "novo",
+    statusValue, // Use the converted status value
+    toNullIfEmpty(created_by),
+    toNullIfEmpty(codigo),
+    toNullIfEmpty(localizacao),
+  ]
+
+  const hasUndefined = params.some((p) => p === undefined)
+  if (hasUndefined) {
+    console.error(" Model: ERRO - parâmetros contêm undefined!")
+    console.error(" Model: pecaData original:", JSON.stringify(pecaData, null, 2))
+    throw new Error("Parâmetros contêm valores undefined. Verifique os dados enviados.")
   }
 
-  static async buscarTodos(incluirInativos = false, filtros = {}) {
-    let query = `
-            SELECT p.*, 
-                   c.nome as categoria_nome,
-                   m.nome as marca_nome,
-                   COUNT(pi.imagem_id) as total_imagens
-            FROM peca p
-            LEFT JOIN categoria c ON p.categoria_id = c.categoria_id
-            LEFT JOIN marca m ON p.marca_id = m.marca_id
-            LEFT JOIN peca_imagem pi ON p.peca_id = pi.peca_id
-            LEFT JOIN imagem i ON pi.imagem_id = i.imagem_id AND i.status = true
-            WHERE 1=1
-        `
-    const params = []
+  const [result] = await pool.execute(query, params)
 
-    if (!incluirInativos) {
-      query += " AND p.status = true"
-    }
+  console.log(" Model: resultado da inserção:", result)
+  console.log(" Model: insertId:", result.insertId)
 
-    if (filtros.categoria_id) {
-      query += " AND p.categoria_id = ?"
-      params.push(filtros.categoria_id)
-    }
+  return result.insertId
+}
 
-    if (filtros.marca_id) {
-      query += " AND p.marca_id = ?"
-      params.push(filtros.marca_id)
-    }
+const update = async (id, pecaData) => {
+  const {
+    nome,
+    descricao,
+    marca_id,
+    preco_venda,
+    preco_custo,
+    quantidade_estoque,
+    quantidade_minima,
+    categoria_id,
+    condicao,
+    updated_by,
+    codigo,
+    localizacao,
+  } = pecaData
+  const query = `
+        UPDATE peca 
+        SET nome=?, descricao=?, marca_id=?, preco_venda=?, preco_custo=?, 
+            quantidade_estoque=?, quantidade_minima=?, categoria_id=?, condicao=?,
+            updated_by=?, updated_at=CURRENT_TIMESTAMP,
+            codigo=?, localizacao=?
+        WHERE peca_id = ?
+    `
+  const [result] = await pool.execute(query, [
+    nome,
+    toNullIfEmpty(descricao),
+    toNullIfEmpty(marca_id),
+    preco_venda,
+    toNullIfEmpty(preco_custo),
+    quantidade_estoque,
+    toNullIfEmpty(quantidade_minima),
+    toNullIfEmpty(categoria_id),
+    condicao || "novo",
+    toNullIfEmpty(updated_by),
+    toNullIfEmpty(codigo),
+    toNullIfEmpty(localizacao),
+    id,
+  ])
+  return result
+}
 
-    if (filtros.condicao) {
-      query += " AND p.condicao = ?"
-      params.push(filtros.condicao)
-    }
+// Método para soft delete (manter compatibilidade)
+const remove = async (id) => {
+  const [result] = await pool.execute("UPDATE peca SET status = FALSE WHERE peca_id = ?", [id])
+  return result
+}
 
-    if (filtros.estoque_baixo) {
-      query += " AND p.quantidade_estoque <= p.quantidade_minima"
-    }
+// Novo método específico para alteração de status
+const updateStatus = async (id, status) => {
+  const query = "UPDATE peca SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE peca_id = ?"
+  const [result] = await pool.execute(query, [status, id])
+  return result
+}
 
-    query += " GROUP BY p.peca_id ORDER BY p.nome"
+const buscarTodos = async (incluirInativos = false, filtros = {}) => {
+  console.log(" Model: iniciando buscarTodos, incluirInativos:", incluirInativos)
 
-    const [rows] = await db.execute(query, params)
+  let whereClause = ""
+  const params = []
+
+  if (!incluirInativos) {
+    whereClause = "WHERE p.status = TRUE"
+  }
+
+  // Add filters if provided
+  if (filtros.categoria_id) {
+    whereClause += whereClause ? " AND" : "WHERE"
+    whereClause += " p.categoria_id = ?"
+    params.push(filtros.categoria_id)
+  }
+
+  if (filtros.marca_id) {
+    whereClause += whereClause ? " AND" : "WHERE"
+    whereClause += " p.marca_id = ?"
+    params.push(filtros.marca_id)
+  }
+
+  const query = `
+    SELECT p.peca_id, p.codigo, p.nome, p.descricao, p.marca_id, p.preco_venda, p.preco_custo,
+           p.quantidade_estoque, p.quantidade_minima, p.categoria_id, p.condicao, p.status,
+           p.data_cadastro, p.updated_at, p.created_by, p.updated_by, p.localizacao,
+           c.nome as categoria_nome, m.nome as marca_nome,
+           (SELECT i.referencia_url 
+            FROM peca_imagem pi 
+            JOIN imagem i ON pi.imagem_id = i.imagem_id 
+            WHERE pi.peca_id = p.peca_id 
+            LIMIT 1) as imagem_principal
+    FROM peca p
+    LEFT JOIN categoria c ON p.categoria_id = c.categoria_id
+    LEFT JOIN marca m ON p.marca_id = m.marca_id
+    ${whereClause}
+    ORDER BY p.nome
+  `
+
+  console.log(" Model: executando query:", query)
+  console.log(" Model: parâmetros:", params)
+
+  try {
+    const [rows] = await pool.execute(query, params)
+    console.log(" Model: query executada com sucesso, linhas:", rows.length)
     return rows
-  }
-
-  static async atualizar(id, peca) {
-    const connection = await db.getConnection()
-    try {
-      await connection.beginTransaction()
-
-      const query = `
-                UPDATE peca 
-                SET nome = ?, descricao = ?, marca_id = ?, preco_venda = ?, preco_custo = ?,
-                    quantidade_estoque = ?, quantidade_minima = ?, categoria_id = ?, 
-                    condicao = ?, status = ?
-                WHERE peca_id = ?
-            `
-      const [result] = await connection.execute(query, [
-        peca.nome,
-        peca.descricao,
-        peca.marca_id,
-        peca.preco_venda,
-        peca.preco_custo,
-        peca.quantidade_estoque,
-        peca.quantidade_minima,
-        peca.categoria_id,
-        peca.condicao,
-        peca.status,
-        id,
-      ])
-
-      await connection.commit()
-      return result.affectedRows > 0
-    } catch (error) {
-      await connection.rollback()
-      throw error
-    } finally {
-      connection.release()
-    }
-  }
-
-  static async inativar(id) {
-    const query = "UPDATE peca SET status = false WHERE peca_id = ?"
-    const [result] = await db.execute(query, [id])
-    return result.affectedRows > 0
-  }
-
-  static async adicionarImagem(pecaId, imagemId) {
-    const query = "INSERT INTO peca_imagem (peca_id, imagem_id) VALUES (?, ?)"
-    const [result] = await db.execute(query, [pecaId, imagemId])
-    return result.affectedRows > 0
-  }
-
-  static async removerImagem(pecaId, imagemId) {
-    const query = "DELETE FROM peca_imagem WHERE peca_id = ? AND imagem_id = ?"
-    const [result] = await db.execute(query, [pecaId, imagemId])
-    return result.affectedRows > 0
-  }
-
-  static async buscarImagensPeca(pecaId) {
-    const query = `
-            SELECT i.* FROM imagem i
-            INNER JOIN peca_imagem pi ON i.imagem_id = pi.imagem_id
-            WHERE pi.peca_id = ? AND i.status = true
-            ORDER BY i.imagem_id
-        `
-    const [rows] = await db.execute(query, [pecaId])
-    return rows
+  } catch (error) {
+    console.error(" Model: erro na query:", error)
+    console.error(" Model: query que falhou:", query)
+    throw error
   }
 }
 
-module.exports = PecaModel
+const buscarPorId = async (id) => {
+  const query = `
+    SELECT p.peca_id, p.codigo, p.nome, p.descricao, p.marca_id, p.preco_venda, p.preco_custo,
+           p.quantidade_estoque, p.quantidade_minima, p.categoria_id, p.condicao, p.status,
+           p.data_cadastro, p.updated_at, p.created_by, p.updated_by, p.localizacao,
+           c.nome as categoria_nome, m.nome as marca_nome,
+           (SELECT pi.imagem_id 
+            FROM peca_imagem pi 
+            WHERE pi.peca_id = p.peca_id 
+            LIMIT 1) as imagem_principal_id
+    FROM peca p
+    LEFT JOIN categoria c ON p.categoria_id = c.categoria_id
+    LEFT JOIN marca m ON p.marca_id = m.marca_id
+    WHERE p.peca_id = ?
+  `
+  const [rows] = await pool.execute(query, [id])
+  return rows[0] || null
+}
+
+const atualizar = async (id, pecaData) => {
+  const {
+    nome,
+    descricao,
+    marca_id,
+    preco_venda,
+    preco_custo = pecaData.preco_compra, // Aceitar preco_compra como alternativa
+    quantidade_estoque,
+    quantidade_minima = pecaData.estoque_minimo, // Aceitar estoque_minimo como alternativa
+    categoria_id,
+    condicao,
+    updated_by,
+    codigo,
+    localizacao,
+  } = pecaData
+
+  const query = `
+    UPDATE peca 
+    SET nome = ?, descricao = ?, marca_id = ?, preco_venda = ?, preco_custo = ?,
+        quantidade_estoque = ?, quantidade_minima = ?, categoria_id = ?, 
+        condicao = ?, updated_by = ?,
+        updated_at = CURRENT_TIMESTAMP,
+        codigo = ?, localizacao = ?
+    WHERE peca_id = ?
+  `
+
+  const [result] = await pool.execute(query, [
+    nome,
+    toNullIfEmpty(descricao),
+    toNullIfEmpty(marca_id),
+    preco_venda,
+    toNullIfEmpty(preco_custo),
+    quantidade_estoque || 0,
+    toNullIfEmpty(quantidade_minima),
+    toNullIfEmpty(categoria_id),
+    condicao || "novo",
+    toNullIfEmpty(updated_by),
+    toNullIfEmpty(codigo),
+    toNullIfEmpty(localizacao),
+    id,
+  ])
+
+  return result.affectedRows > 0
+}
+
+const inativar = async (id) => {
+  const [result] = await pool.execute(
+    "UPDATE peca SET status = FALSE, updated_at = CURRENT_TIMESTAMP WHERE peca_id = ?",
+    [id],
+  )
+  return result.affectedRows > 0
+}
+
+const adicionarImagem = async (pecaId, imagemId) => {
+  const query = "INSERT INTO peca_imagem (peca_id, imagem_id) VALUES (?, ?)"
+  const [result] = await pool.execute(query, [pecaId, imagemId])
+  return result.affectedRows > 0
+}
+
+const removerImagem = async (pecaId, imagemId) => {
+  const query = "DELETE FROM peca_imagem WHERE peca_id = ? AND imagem_id = ?"
+  const [result] = await pool.execute(query, [pecaId, imagemId])
+  return result.affectedRows > 0
+}
+
+const buscarImagensPeca = async (pecaId) => {
+  const query = `
+    SELECT i.imagem_id, i.referencia_url, i.descricao, i.status
+    FROM imagem i
+    INNER JOIN peca_imagem pi ON i.imagem_id = pi.imagem_id
+    WHERE pi.peca_id = ? AND i.status = TRUE
+    ORDER BY i.created_at
+  `
+  const [rows] = await pool.execute(query, [pecaId])
+  return rows
+}
+
+module.exports = {
+  findAll,
+  create,
+  criar: create,
+  update,
+  remove,
+  updateStatus,
+  buscarTodos,
+  buscarPorId,
+  atualizar,
+  inativar,
+  adicionarImagem,
+  removerImagem,
+  buscarImagensPeca,
+}

@@ -60,6 +60,50 @@ class AlertaController {
       })
     }
   }
+
+  static async resolverAlerta(req, res) {
+    try {
+      const { id } = req.params
+      const usuario_id = req.user.id
+
+      const resultado = await AlertaService.resolverAlerta(id, usuario_id)
+
+      res.json({
+        success: true,
+        message: resultado.message,
+        data: resultado.data,
+      })
+    } catch (error) {
+      console.error("Erro ao resolver alerta:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao resolver alerta",
+        details: error.message,
+      })
+    }
+  }
+
+  static async dispensarAlerta(req, res) {
+    try {
+      const { id } = req.params
+      const usuario_id = req.user.id
+
+      const resultado = await AlertaService.dispensarAlerta(id, usuario_id)
+
+      res.json({
+        success: true,
+        message: resultado.message,
+        data: resultado.data,
+      })
+    } catch (error) {
+      console.error("Erro ao dispensar alerta:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao dispensar alerta",
+        details: error.message,
+      })
+    }
+  }
 }
 
 module.exports = AlertaController

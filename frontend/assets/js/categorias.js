@@ -1,305 +1,387 @@
-// Import or declare the auth variable before using it
-const auth = {
-  makeAuthenticatedRequest: async (url, options) => {
-    // Placeholder implementation for makeAuthenticatedRequest
-    const response = await fetch(url, options)
-    return response
-  },
-}
+class CategoriaManager {
+  constructor() {
+    this.categorias = []
+    this.currentEditingId = null
+    this.init()
+  }
 
-let categorias = []
-let editingCategoriaId = null
+  async init() {
+    console.log("🔄 Inicializando gerenciador de categorias")
+    await this.loadCategorias()
+    this.setupEventListeners()
+  }
 
-// Initialize page
-document.addEventListener("DOMContentLoaded", () => {
-  loadCategorias()
-})
+  setupEventListeners() {
+    console.log("🔧 Configurando event listeners")
 
-// Load categories from API
-async function loadCategorias() {
-  try {
-    showLoading()
-    const response = await auth.makeAuthenticatedRequest("/api/categorias", {
-      method: "GET",
-    })
-
-    if (!response.ok) {
-      throw new Error("Erro ao carregar categorias")
+    // Event listener para busca
+    const searchInput = document.getElementById("searchCategoria")
+    if (searchInput) {
+      searchInput.removeEventListener("input", this.handleSearch)
+      searchInput.addEventListener("input", () => this.handleSearch())
+      console.log("✅ Event listener de busca configurado")
     }
 
-    categorias = await response.json()
-    renderCategoriasTable()
-  } catch (error) {
-    showToast("Erro ao carregar categorias: " + error.message, "error")
-  } finally {
-    hideLoading()
+    // Event listeners para modais
+    window.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("categoriaModal")) {
+        this.closeCategoriaModal()
+      }
+    })
+  }
+
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("❌ Token não encontrado")
+      window.location.href = "login.html"
+      return null
+    }
+
+    const defaultOptions = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+
+    const finalOptions = { ...defaultOptions, ...options }
+    if (options.body && typeof options.body === "object") {
+      finalOptions.body = JSON.stringify(options.body)
+    }
+
+    try {
+      console.log("📡 Fazendo requisição:", url, finalOptions.method || "GET")
+      console.log("📡 Body da requisição:", finalOptions.body)
+
+      const response = await fetch(`http://localhost:3000${url}`, finalOptions)
+
+      console.log("📡 Status da resposta:", response.status)
+
+      if (response.status === 401) {
+        console.error("❌ Token expirado, redirecionando para login")
+        localStorage.removeItem("token")
+        window.location.href = "login.html"
+        return null
+      }
+
+      return response
+    } catch (error) {
+      console.error("❌ Erro na requisição:", error)
+      this.showToast("Erro de conexão com o servidor", "error")
+      return null
+    }
+  }
+
+  async loadCategorias() {
+    try {
+      this.showLoading(true)
+      console.log("��� Carregando categorias...")
+
+      const response = await this.makeAuthenticatedRequest("/api/categorias")
+      if (!response || !response.ok) {
+        throw new Error("Erro ao carregar categorias")
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        this.categorias = result.data || []
+        console.log("✅ Categorias carregadas:", this.categorias.length)
+        this.renderCategorias(this.categorias)
+      } else {
+        throw new Error(result.error || "Erro desconhecido")
+      }
+    } catch (error) {
+      console.error("❌ Erro ao carregar categorias:", error)
+      this.showToast("Erro ao carregar categorias", "error")
+      this.renderCategorias([])
+    } finally {
+      this.showLoading(false)
+    }
+  }
+
+  renderCategorias(categorias) {
+    const tbody = document.getElementById("categoriasTableBody")
+    if (!tbody) {
+      console.error("❌ Elemento categoriasTableBody não encontrado")
+      return
+    }
+
+    if (categorias.length === 0) {
+      tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Nenhuma categoria encontrada</h5>
+                            <p class="text-muted">Clique em "Nova Categoria" para adicionar a primeira categoria.</p>
+                        </div>
+                    </td>
+                </tr>
+            `
+      return
+    }
+
+    tbody.innerHTML = categorias
+      .map((categoria) => {
+        const statusClass = categoria.status ? "" : "inativo"
+        const statusText = categoria.status ? "ATIVO" : "INATIVO"
+        const statusBadgeClass = categoria.status ? "status-ativo" : "status-inativo"
+
+        return `
+                <tr class="categoria-row ${statusClass}" data-id="${categoria.categoria_id}">
+                    <td>${categoria.categoria_id}</td>
+                    <td class="nome-cell">${this.escapeHtml(categoria.nome)}</td>
+                    <td class="descricao-cell">${this.escapeHtml(categoria.descricao || "-")}</td>
+                    <td>
+                        <span class="status-badge ${statusBadgeClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="actions-column">
+                        <div class="action-buttons">
+                            <button class="btn-sm btn-edit"
+                                    onclick="categoriaManager.editCategoria(${categoria.categoria_id})"
+                                    title="Editar categoria">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button class="btn-sm ${categoria.status ? "btn-delete" : "btn-edit"}"
+                                    onclick="confirmAction('${categoria.status ? "desativar" : "ativar"}', 'categoria', function() { categoriaManager.performToggleStatus(${categoria.categoria_id}, ${!categoria.status}); })"
+                                    title="${categoria.status ? "Desativar" : "Ativar"} categoria">
+                                <i class="fas ${categoria.status ? "fa-eye-slash" : "fa-eye"}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `
+      })
+      .join("")
+
+    console.log("✅ Tabela renderizada com", categorias.length, "categorias")
+  }
+
+  async performToggleStatus(id, newStatus) {
+    try {
+      this.showLoading(true)
+      console.log("🔄 Alterando status da categoria ID:", id, "para:", newStatus)
+
+      const response = await this.makeAuthenticatedRequest(`/api/categorias/${id}/status`, {
+        method: "PATCH",
+        body: { status: newStatus },
+      })
+
+      if (!response || !response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }))
+        throw new Error(errorData.error || `Erro ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log("✅ Status alterado com sucesso:", result)
+
+      const statusText = newStatus ? "ativada" : "inativada"
+      this.showToast(`Categoria ${statusText} com sucesso!`, "success")
+
+      setTimeout(async () => {
+        await this.loadCategorias()
+      }, 500)
+    } catch (error) {
+      console.error("❌ Erro ao alterar status:", error)
+      this.showToast(error.message || "Erro ao alterar status da categoria", "error")
+    } finally {
+      this.showLoading(false)
+    }
+  }
+
+  showAddCategoriaModal() {
+    console.log("📝 Abrindo modal para nova categoria")
+    this.currentEditingId = null
+    document.getElementById("categoriaModalTitle").textContent = "Nova Categoria"
+    document.getElementById("categoriaForm").reset()
+    document.getElementById("categoriaId").value = ""
+    document.getElementById("categoriaModal").style.display = "block"
+
+    setTimeout(() => {
+      document.getElementById("categoriaNome").focus()
+    }, 100)
+  }
+
+  async editCategoria(id) {
+    console.log("📝 Editando categoria ID:", id)
+    const categoria = this.categorias.find((c) => c.categoria_id === id)
+    if (!categoria) {
+      this.showToast("Categoria não encontrada", "error")
+      return
+    }
+
+    this.currentEditingId = id
+    document.getElementById("categoriaModalTitle").textContent = "Editar Categoria"
+    document.getElementById("categoriaId").value = id
+    document.getElementById("categoriaNome").value = categoria.nome || ""
+    document.getElementById("categoriaDescricao").value = categoria.descricao || ""
+    document.getElementById("categoriaStatus").value = categoria.status ? "ativo" : "inativo"
+    document.getElementById("categoriaModal").style.display = "block"
+  }
+
+  closeCategoriaModal() {
+    console.log("📝 Fechando modal de categoria")
+    document.getElementById("categoriaModal").style.display = "none"
+    document.getElementById("categoriaForm").reset()
+    this.currentEditingId = null
+  }
+
+  async handleFormSubmit(event) {
+    console.log("📝 handleFormSubmit chamada")
+    event.preventDefault()
+
+    console.log("📝 Coletando dados do formulário...")
+    const formData = new FormData(event.target)
+
+    const categoriaData = {
+      nome: formData.get("nome")?.trim() || "",
+      descricao: formData.get("descricao")?.trim() || null,
+      status: formData.get("status") === "ativo" ? true : false,
+    }
+
+    console.log("📝 Dados processados:", categoriaData)
+
+    // Validações
+    if (!categoriaData.nome) {
+      this.showToast("Nome da categoria é obrigatório", "error")
+      return false
+    }
+
+    try {
+      this.showLoading(true)
+      const isEdit = this.currentEditingId !== null
+      const url = isEdit ? `/api/categorias/${this.currentEditingId}` : "/api/categorias"
+      const method = isEdit ? "PUT" : "POST"
+
+      console.log(`🔄 ${isEdit ? "Atualizando" : "Criando"} categoria:`, categoriaData)
+
+      const response = await this.makeAuthenticatedRequest(url, {
+        method: method,
+        body: categoriaData,
+      })
+
+      if (!response || !response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }))
+        console.error("❌ Resposta da API:", errorData)
+        throw new Error(errorData.error || "Erro ao salvar categoria")
+      }
+
+      const result = await response.json()
+      console.log("✅ Categoria salva com sucesso:", result)
+
+      this.showToast(result.message || `Categoria ${isEdit ? "atualizada" : "criada"} com sucesso!`, "success")
+      this.closeCategoriaModal()
+
+      setTimeout(async () => {
+        await this.loadCategorias()
+      }, 500)
+    } catch (error) {
+      console.error("❌ Erro ao salvar categoria:", error)
+      this.showToast(error.message || "Erro ao salvar categoria", "error")
+    } finally {
+      this.showLoading(false)
+    }
+
+    return false
+  }
+
+  handleSearch() {
+    const searchTerm = document.getElementById("searchCategoria").value.toLowerCase().trim()
+    console.log("🔍 Buscando por:", searchTerm)
+
+    if (!searchTerm) {
+      console.log("🔍 Busca vazia, mostrando todas as categorias")
+      this.renderCategorias(this.categorias)
+      return
+    }
+
+    const filtered = this.categorias.filter((categoria) => {
+      const matches =
+        categoria.nome.toLowerCase().includes(searchTerm) ||
+        (categoria.descricao && categoria.descricao.toLowerCase().includes(searchTerm))
+
+      if (matches) {
+        console.log("🎯 Match encontrado:", categoria.nome)
+      }
+      return matches
+    })
+
+    console.log(`🔍 Busca por "${searchTerm}" encontrou ${filtered.length} categorias`)
+    this.renderCategorias(filtered)
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement("div")
+    div.textContent = text || ""
+    return div.innerHTML
+  }
+
+  showLoading(show) {
+    console.log(show ? "⏳ Carregando..." : "✅ Carregamento concluído")
+  }
+
+  showToast(message, type = "info") {
+    console.log(`${type.toUpperCase()}: ${message}`)
+
+    const toast = document.createElement("div")
+    toast.className = `toast toast-${type}`
+    toast.textContent = message
+    toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === "success" ? "#28a745" : type === "error" ? "#dc3545" : "#17a2b8"};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            z-index: 9999;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        `
+
+    document.body.appendChild(toast)
+
+    setTimeout(() => {
+      toast.remove()
+    }, 3000)
   }
 }
 
-function renderCategoriasTable() {
-  const tbody = document.getElementById("categoriasTableBody")
-  tbody.innerHTML = ""
+// Funções globais para compatibilidade com HTML
+let categoriaManager
 
-  categorias.forEach((categoria) => {
-    const row = document.createElement("tr")
-    row.innerHTML = `
-            <td>${categoria.id}</td>
-            <td>${categoria.nome}</td>
-            <td>${categoria.descricao || "-"}</td>
-            <td>
-                <span class="status-badge ${categoria.status === "ativo" ? "status-ativo" : "status-inativo"}">
-                    ${categoria.status}
-                </span>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn-sm btn-edit" onclick="editCategoria(${categoria.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-sm btn-delete" onclick="deleteCategoria(${categoria.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `
-    tbody.appendChild(row)
-  })
-}
-
-// Search categories
-function searchCategorias() {
-  const searchTerm = document.getElementById("searchCategoria").value.toLowerCase()
-  const filteredCategorias = categorias.filter(
-    (categoria) =>
-      categoria.nome.toLowerCase().includes(searchTerm) ||
-      (categoria.descricao && categoria.descricao.toLowerCase().includes(searchTerm)),
-  )
-
-  const tbody = document.getElementById("categoriasTableBody")
-  tbody.innerHTML = ""
-
-  filteredCategorias.forEach((categoria) => {
-    const row = document.createElement("tr")
-    row.innerHTML = `
-            <td>${categoria.id}</td>
-            <td>${categoria.nome}</td>
-            <td>${categoria.descricao || "-"}</td>
-            <td>
-                <span class="status-badge ${categoria.status === "ativo" ? "status-ativo" : "status-inativo"}">
-                    ${categoria.status}
-                </span>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn-sm btn-edit" onclick="editCategoria(${categoria.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-sm btn-delete" onclick="deleteCategoria(${categoria.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `
-    tbody.appendChild(row)
-  })
-}
-
-// Show add category modal
 function showAddCategoriaModal() {
-  editingCategoriaId = null
-  document.getElementById("categoriaModalTitle").textContent = "Nova Categoria"
-  document.getElementById("categoriaForm").reset()
-  document.getElementById("categoriaId").value = ""
-  document.getElementById("categoriaModal").style.display = "block"
+  console.log("🌐 showAddCategoriaModal chamada")
+  categoriaManager.showAddCategoriaModal()
 }
 
-// Edit category
-function editCategoria(id) {
-  const categoria = categorias.find((c) => c.id === id)
-  if (!categoria) return
-
-  editingCategoriaId = id
-  document.getElementById("categoriaModalTitle").textContent = "Editar Categoria"
-  document.getElementById("categoriaId").value = categoria.id
-  document.getElementById("categoriaNome").value = categoria.nome
-  document.getElementById("categoriaDescricao").value = categoria.descricao || ""
-  document.getElementById("categoriaStatus").value = categoria.status
-  document.getElementById("categoriaModal").style.display = "block"
-}
-
-async function saveCategoriaForm(event) {
-  event.preventDefault()
-
-  const formData = new FormData(event.target)
-  const categoriaData = {
-    nome: formData.get("nome").trim(),
-    descricao: formData.get("descricao").trim(),
-    status: formData.get("status"),
-  }
-
-  if (!categoriaData.nome) {
-    showToast("Nome da categoria é obrigatório", "error")
-    return
-  }
-
-  if (!categoriaData.status) {
-    showToast("Status é obrigatório", "error")
-    return
-  }
-
-  try {
-    showLoading()
-
-    const url = editingCategoriaId ? `/api/categorias/${editingCategoriaId}` : "/api/categorias"
-    const method = editingCategoriaId ? "PUT" : "POST"
-
-    const response = await auth.makeAuthenticatedRequest(url, {
-      method: method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(categoriaData),
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.message || "Erro ao salvar categoria")
-    }
-
-    showToast(editingCategoriaId ? "Categoria atualizada com sucesso!" : "Categoria criada com sucesso!", "success")
-    closeCategoriaModal()
-    loadCategorias()
-  } catch (error) {
-    showToast("Erro ao salvar categoria: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
-}
-
-async function deleteCategoria(id) {
-  if (!confirm("Tem certeza que deseja excluir esta categoria?")) return
-
-  try {
-    showLoading()
-
-    const response = await auth.makeAuthenticatedRequest(`/api/categorias/${id}`, {
-      method: "DELETE",
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.message || "Erro ao excluir categoria")
-    }
-
-    showToast("Categoria excluída com sucesso!", "success")
-    loadCategorias()
-  } catch (error) {
-    showToast("Erro ao excluir categoria: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
-}
-
-// Close category modal
 function closeCategoriaModal() {
-  document.getElementById("categoriaModal").style.display = "none"
-  editingCategoriaId = null
+  console.log("🌐 closeCategoriaModal chamada")
+  categoriaManager.closeCategoriaModal()
 }
 
-function closeChangePasswordModal() {
-  document.getElementById("changePasswordModal").style.display = "none"
-}
-
-async function changePassword(event) {
+function saveCategoriaForm(event) {
+  console.log("🌐 saveCategoriaForm chamada - prevenindo submit padrão")
   event.preventDefault()
+  return categoriaManager.handleFormSubmit(event)
+}
 
-  const formData = new FormData(event.target)
-  const currentPassword = formData.get("currentPassword")
-  const newPassword = formData.get("newPassword")
-  const confirmNewPassword = formData.get("confirmNewPassword")
+function searchCategorias() {
+  console.log("🌐 searchCategorias chamada (DEPRECIADA)")
+  categoriaManager.handleSearch()
+}
 
-  if (newPassword !== confirmNewPassword) {
-    showToast("As senhas não coincidem", "error")
-    return
-  }
-
-  try {
-    showLoading()
-
-    const response = await auth.makeAuthenticatedRequest("/api/auth/change-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        currentPassword,
-        newPassword,
-      }),
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.message || "Erro ao alterar senha")
-    }
-
-    showToast("Senha alterada com sucesso!", "success")
-    closeChangePasswordModal()
-    document.getElementById("changePasswordForm").reset()
-  } catch (error) {
-    showToast("Erro ao alterar senha: " + error.message, "error")
-  } finally {
-    hideLoading()
+function confirmAction(action, item, callback) {
+  const message = `Tem certeza que deseja ${action} esta ${item}?`
+  if (confirm(message)) {
+    callback()
   }
 }
 
-// Close modal when clicking outside
-window.onclick = (event) => {
-  const categoriaModal = document.getElementById("categoriaModal")
-  const passwordModal = document.getElementById("changePasswordModal")
-
-  if (event.target === categoriaModal) {
-    closeCategoriaModal()
-  }
-
-  if (event.target === passwordModal) {
-    closeChangePasswordModal()
-  }
-}
-
-function showLoading() {
-  // Simple loading implementation
-  document.body.style.cursor = "wait"
-}
-
-function hideLoading() {
-  document.body.style.cursor = "default"
-}
-
-function showToast(message, type) {
-  // Simple toast implementation
-  const toast = document.createElement("div")
-  toast.className = `toast toast-${type}`
-  toast.textContent = message
-  toast.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 4px;
-    color: white;
-    z-index: 10000;
-    font-weight: bold;
-    ${type === "success" ? "background: #28a745;" : "background: #dc3545;"}
-  `
-
-  document.body.appendChild(toast)
-
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.parentNode.removeChild(toast)
-    }
-  }, 3000)
-}
+// Inicializar quando o DOM estiver pronto
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("🚀 Inicializando CategoriaManager")
+  categoriaManager = new CategoriaManager()
+})

@@ -1,20 +1,21 @@
 const express = require("express")
 const router = express.Router()
-const PecaController = require("../app/controllers/pecaController")
+const pecaController = require("../app/controllers/pecaController")
 const { validarPeca, validarImagemPeca } = require("../middleware/validation")
 const { authenticateToken } = require("../middleware/auth")
 
-// Aplicar autenticação em todas as rotas
 router.use(authenticateToken)
 
-router.post("/", validarPeca, PecaController.criar)
-router.get("/", PecaController.listar)
-router.get("/:id", PecaController.buscarPorId)
-router.put("/:id", validarPeca, PecaController.atualizar)
-router.delete("/:id", PecaController.inativar)
+router.post("/", validarPeca, pecaController.create)
+router.get("/", pecaController.list)
+router.get("/:id", pecaController.getById)
+router.put("/:id", validarPeca, pecaController.update)
+router.delete("/:id", pecaController.remove)
 
-router.post("/:id/imagens", validarImagemPeca, PecaController.adicionarImagem)
-router.get("/:id/imagens", PecaController.buscarImagens)
-router.delete("/:id/imagens/:imagemId", PecaController.removerImagem)
+router.patch("/:id/status", pecaController.toggleStatus)
+
+router.post("/:id/imagens", pecaController.vincularImagem)
+router.get("/:id/imagens", pecaController.buscarImagens)
+router.delete("/:id/imagens/:imagemId", pecaController.removerImagem)
 
 module.exports = router

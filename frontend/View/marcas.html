@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marcas - SIPC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .sidebar {
+            width: 250px;
+            background: #2C3E50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1ABC9C;
+        }
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            background: #34495E;
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: block;
+            text-align: left;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: #1ABC9C;
+        }
+        .sidebar a.readonly {
+            background: #3a536b !important;
+        }
+        .sidebar .user-info {
+            margin-top: auto;
+            padding: 15px;
+            border-top: 1px solid #34495E;
+            text-align: center;
+        }
+        .sidebar .user-info .user-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .sidebar .user-info .user-role {
+            font-size: 12px;
+            color: #BDC3C7;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .header {
+            background: #1ABC9C;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.9;
+        }
+        .actions-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        .btn-primary {
+            background: #1ABC9C;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+        .btn-primary:hover {
+            background: #16a085;
+        }
+        .btn-secondary {
+            background: #34495E;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .btn-secondary:hover {
+            background: #2C3E50;
+        }
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .card-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-header h3 {
+            color: #2C3E50;
+            margin: 0;
+        }
+        .card-body {
+            padding: 0;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        .table th,
+        .table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            color: #2C3E50;
+            font-weight: bold;
+        }
+        .table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #c3e6cb;
+            display: inline-block;
+            white-space: nowrap;
+            min-width: 70px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
+        .status-badge.status-ativo {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .status-badge.status-inativo {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .btn-edit:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-toggle-status {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .btn-toggle-status:hover {
+            background-color: #545b62;
+            transform: translateY(-2px);
+        }
+
+        /* Enhanced modal and form styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(26, 188, 156, 0.3);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-header h3::before {
+            content: '\f02b';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.2s ease;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2C3E50;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group label::before {
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #1ABC9C;
+            font-size: 14px;
+        }
+
+        .form-group label[for="marcaNome"]::before {
+            content: '\f02b';
+        }
+
+        .form-group label[for="marcaDescricao"]::before {
+            content: '\f036';
+        }
+
+        .form-group label[for="marcaStatus"]::before {
+            content: '\f058';
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: #fff;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1ABC9C;
+            box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .field-info {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .field-info::before {
+            content: '\f05a';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #6c757d;
+        }
+
+        .form-group.has-error input,
+        .form-group.has-error select,
+        .form-group.has-error textarea {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+
+        .form-group.has-success input,
+        .form-group.has-success select,
+        .form-group.has-success textarea {
+            border-color: #28a745;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .error-message::before {
+            content: '\f071';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1ABC9C, #16a085);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(26, 188, 156, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #16a085, #138d75);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(26, 188, 156, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                padding: 10px;
+            }
+            .actions-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-box {
+                max-width: none;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+            .modal-body {
+                padding: 20px 15px;
+            }
+            .modal-footer {
+                padding: 15px;
+                flex-direction: column;
+            }
+            .modal-footer button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2><i class="fas fa-microchip"></i> SIPC</h2>
+        <div id="sidebar-menu">
+        </div>
+        <div class="user-info">
+            <div class="user-name">Carregando...</div>
+            <div class="user-role">...</div>
+            <button onclick="showChangePasswordModal()" style="background: #1ABC9C; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%;">
+                <i class="fas fa-key"></i> Alterar Senha
+            </button>
+            <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Updated header content for marcas instead of categorias -->
+        <div class="header">
+            <h1>Gerenciamento de Marcas</h1>
+            <p>Cadastre e gerencie as marcas de peças do sistema</p>
+        </div>
+
+        <div class="actions-bar">
+            <!-- Updated button and search functionality for marcas -->
+            <button class="btn-primary" onclick="showAddMarcaModal()">
+                <i class="fas fa-plus"></i> Nova Marca
+            </button>
+            <div class="search-box">
+                <input type="text" id="searchMarca" placeholder="Buscar marca..." onkeyup="searchMarcas()">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <!-- Updated card header for marcas -->
+                <h3>Lista de Marcas</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <!-- Updated table ID and tbody ID for marcas -->
+                    <table class="table" id="marcasTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Descrição</th>
+                                <th>Status</th>
+                                <th class="actions-column">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marcasTableBody">
+                            <!-- Brands will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced modal form with better design and validation -->
+    <div id="marcaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="marcaModalTitle">Nova Marca</h3>
+                <span class="close" onclick="closeMarcaModal()">&times;</span>
+            </div>
+            <form id="marcaForm" onsubmit="saveMarcaForm(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="marcaId">
+                    
+                    <div class="form-group">
+                        <label for="marcaNome">Nome da Marca *</label>
+                        <input type="text" id="marcaNome" name="nome" maxlength="100" required 
+                               placeholder="Digite o nome da marca">
+                        <small class="field-info">Máximo 100 caracteres</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="marcaDescricao">Descrição</label>
+                        <textarea id="marcaDescricao" name="descricao" maxlength="255" rows="4" 
+                                  placeholder="Digite uma descrição para a marca (opcional)"></textarea>
+                        <small class="field-info">Máximo 255 caracteres</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="marcaStatus">Status *</label>
+                        <select id="marcaStatus" name="status" required>
+                            <option value="">Selecione o status</option>
+                            <option value="1">Ativo</option>
+                            <option value="0">Inativo</option>
+                        </select>
+                        <small class="field-info">Define se a marca estará disponível no sistema</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeMarcaModal()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Added change password modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Alterar Senha</h3>
+                <span class="close" onclick="closeChangePasswordModal()">&times;</span>
+            </div>
+            <form id="changePasswordForm" onsubmit="changePassword(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="currentPassword">Senha Atual *</label>
+                        <input type="password" id="currentPassword" name="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Nova Senha *</label>
+                        <input type="password" id="newPassword" name="newPassword" minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">Confirmar Nova Senha *</label>
+                        <input type="password" id="confirmNewPassword" name="confirmNewPassword" minlength="6" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeChangePasswordModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Alterar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reordered scripts to load permissions system first -->
+    <script src="../assets/js/permissions.js"></script>
+    <script src="../assets/js/page-permissions.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/marcas.js"></script>
+
+    <!-- Replaced inline script with proper permission verification following categorias.html pattern -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!window.auth.initialized) {
+                setTimeout(initPageWithPermissions, 500);
+            } else {
+                await initPageWithPermissions();
+            }
+            
+            async function initPageWithPermissions() {
+                const currentPage = window.location.pathname.split('/').pop();
+                
+                if (!window.auth.isAuthenticated()) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                try {
+                    const userData = await window.auth.getCurrentUser();
+                    const hasAccess = window.PermissionManager.hasPageAccess(userData.tipo_usuario, currentPage);
+                    
+                    if (!hasAccess) {
+                        alert('Acesso negado! Você não tem permissão para acessar esta página.');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    
+                    updateUserInfo(userData);
+                    window.PermissionManager.buildMenu(userData.tipo_usuario, currentPage);
+                } catch (error) {
+                    console.error('Erro ao verificar permissões:', error);
+                    window.location.href = '/login.html';
+                }
+            }
+        });
+        
+        function updateUserInfo(user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userRoleEl = document.querySelector('.user-role');
+            if (userNameEl && userRoleEl) {
+                userNameEl.textContent = user.nome || 'Usuário';
+                userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
+            }
+        }
+
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'block';
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        function changePassword(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+            
+            if (newPassword !== confirmNewPassword) {
+                alert('As senhas não coincidem');
+                return;
+            }
+            
+            // Implementation for password change
+            console.log('Alterar senha funcionalidade em desenvolvimento');
+            closeChangePasswordModal();
+        }
+
+        function logout() {
+            window.auth.logout();
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

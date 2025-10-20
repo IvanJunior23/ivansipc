@@ -78,6 +78,40 @@ class FormaPagamentoController {
       })
     }
   }
+
+  static async toggleStatus(req, res) {
+    try {
+      const { id } = req.params
+      const { status } = req.body
+
+      console.log("🔄 Controller: alterando status da forma de pagamento ID:", id, "para:", status)
+
+      // Validar se o parâmetro status foi fornecido
+      if (status === undefined || status === null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parâmetro "status" é obrigatório',
+        })
+      }
+
+      // Validar se é um valor boolean válido
+      if (typeof status !== "boolean" && status !== 0 && status !== 1 && status !== "0" && status !== "1") {
+        return res.status(400).json({
+          success: false,
+          error: 'Parâmetro "status" deve ser boolean, 0 ou 1',
+        })
+      }
+
+      const formaPagamentoAtualizada = await FormaPagamentoService.updateFormaPagamentoStatus(id, status)
+      res.json({ success: true, data: formaPagamentoAtualizada })
+    } catch (error) {
+      console.error("❌ Controller: erro ao alterar status:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Erro interno do servidor",
+      })
+    }
+  }
 }
 
 module.exports = FormaPagamentoController

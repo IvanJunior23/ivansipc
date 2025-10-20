@@ -1,4 +1,5 @@
-const db = require("../../config/database")
+const { db } = require("../../config/database")
+const ItemCompraModel = require("./itemCompraModel")
 
 class CompraModel {
   static async criar(compra) {
@@ -30,32 +31,40 @@ class CompraModel {
 
   static async buscarPorId(id) {
     const query = `
-            SELECT c.*, 
-                   f.nome as fornecedor_nome, f.cnpj,
-                   u.email as usuario_email,
-                   p.nome as pessoa_nome
-            FROM compra c
-            LEFT JOIN fornecedor f ON c.fornecedor_id = f.fornecedor_id
-            LEFT JOIN pessoa pf ON f.pessoa_id = pf.pessoa_id
-            LEFT JOIN usuario u ON c.usuario_id = u.usuario_id
-            LEFT JOIN pessoa p ON u.pessoa_id = p.pessoa_id
-            WHERE c.compra_id = ?
-        `
+      SELECT c.*, 
+             p.nome as fornecedor_nome,
+             cont.email as usuario_email
+      FROM compra c
+      LEFT JOIN fornecedor f ON c.fornecedor_id = f.fornecedor_id
+      LEFT JOIN pessoa p ON f.pessoa_id = p.pessoa_id
+      LEFT JOIN usuario u ON c.usuario_id = u.usuario_id
+      LEFT JOIN pessoa pu ON u.pessoa_id = pu.pessoa_id
+      LEFT JOIN contato cont ON pu.contato_id = cont.contato_id
+      WHERE c.compra_id = ?
+    `
     const [rows] = await db.execute(query, [id])
-    return rows[0]
+
+    if (rows.length === 0) {
+      return null
+    }
+
+    const compra = rows[0]
+
+    // Buscar itens da compra
+    compra.itens = await ItemCompraModel.buscarPorCompraId(id)
+
+    return compra
   }
 
   static async buscarTodos(filtros = {}) {
     let query = `
             SELECT c.*, 
-                   f.nome as fornecedor_nome, f.cnpj,
-                   u.email as usuario_email,
-                   p.nome as pessoa_nome
+                   p.nome as fornecedor_nome,
+                   u.email as usuario_email
             FROM compra c
             LEFT JOIN fornecedor f ON c.fornecedor_id = f.fornecedor_id
-            LEFT JOIN pessoa pf ON f.pessoa_id = pf.pessoa_id
+            LEFT JOIN pessoa p ON f.pessoa_id = p.pessoa_id
             LEFT JOIN usuario u ON c.usuario_id = u.usuario_id
-            LEFT JOIN pessoa p ON u.pessoa_id = p.pessoa_id
             WHERE 1=1
         `
     const params = []

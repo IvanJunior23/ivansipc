@@ -6,14 +6,13 @@ const path = require("path")
 require("dotenv").config()
 
 // Adicione TEMPORARIAMENTE no início do server.js, após require("dotenv").config()
-console.log('🔍 Verificando variáveis de ambiente:')
-console.log('SMTP_HOST:', process.env.SMTP_HOST)
-console.log('SMTP_PORT:', process.env.SMTP_PORT)
-console.log('SMTP_USER:', process.env.SMTP_USER)
-console.log('SMTP_PASS:', process.env.SMTP_PASS ? '***configurado***' : 'NÃO CONFIGURADO')
-console.log('SMTP_FROM:', process.env.SMTP_FROM)
-console.log('---')
-
+console.log("🔍 Verificando variáveis de ambiente:")
+console.log("SMTP_HOST:", process.env.SMTP_HOST)
+console.log("SMTP_PORT:", process.env.SMTP_PORT)
+console.log("SMTP_USER:", process.env.SMTP_USER)
+console.log("SMTP_PASS:", process.env.SMTP_PASS ? "***configurado***" : "NÃO CONFIGURADO")
+console.log("SMTP_FROM:", process.env.SMTP_FROM)
+console.log("---")
 
 // --- 1. Conexão com o Banco e Configurações Iniciais ---
 const { testConnection } = require("./backend/config/database")
@@ -28,9 +27,9 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // --- 3. SERVIR ARQUIVOS DO FRONTEND ---
-// Esta linha é a mais importante para a navegação.
-// Ela automaticamente encontra e serve os arquivos como index.html, usuarios.html, etc.
 app.use(express.static(path.join(__dirname, "frontend")))
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
 // --- 4. Registrar TODAS as rotas da API ---
 const authRoutes = require("./backend/routes/auth")
@@ -52,12 +51,11 @@ const trocaRoutes = require("./backend/routes/trocas")
 const alertaRoutes = require("./backend/routes/alertas")
 const faqRoutes = require("./backend/routes/faq")
 const dashboardRoutes = require("./backend/routes/dashboard")
-const testRoutes = require('./backend/routes/testRoutes')
-const passwordResetRoutes = require('./backend/routes/passwordReset')
-const pessoasRoutes = require('./backend/routes/pessoas');
-
-
-
+const testRoutes = require("./backend/routes/testRoutes")
+const LogsRoutes = require("./backend/routes/logs")
+const passwordResetRoutes = require("./backend/routes/passwordReset")
+const pessoasRoutes = require("./backend/routes/pessoas")
+const imagemRoutes = require("./backend/routes/imagens")
 
 app.use("/api/auth", authRoutes)
 app.use("/api/usuarios", usuarioRoutes)
@@ -70,7 +68,7 @@ app.use("/api/relatorios", relatorioRoutes)
 app.use("/api/contatos", contatoRoutes)
 app.use("/api/enderecos", enderecoRoutes)
 app.use("/api/categorias", categoriaRoutes)
-app.use("/api/marcas", marcaRoutes) 
+app.use("/api/marcas", marcaRoutes)
 app.use("/api/formas-pagamento", formaPagamentoRoutes)
 app.use("/api/pecas", pecaRoutes)
 app.use("/api/compras", compraRoutes)
@@ -78,20 +76,20 @@ app.use("/api/trocas", trocaRoutes)
 app.use("/api/alertas", alertaRoutes)
 app.use("/api/faq", faqRoutes)
 app.use("/api/dashboard", dashboardRoutes)
-app.use('/api/test', testRoutes)
-app.use('/api/password', passwordResetRoutes)
-app.use('/api/pessoas', pessoasRoutes);
-
-
+app.use("/api/test", testRoutes)
+app.use("/api/logs", LogsRoutes)
+app.use("/api/password", passwordResetRoutes)
+app.use("/api/pessoas", pessoasRoutes)
+app.use("/api/imagens", imagemRoutes)
 
 // --- 5. Rota Principal e Tratamento de Erros ---
 // Rota para servir a página de login como a página principal do site
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "login.html"))
+  res.sendFile(path.join(__dirname, "frontend", "View", "login.html"))
 })
 
 app.get("/recuperar-senha.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "recuperar-senha.html"))
+  res.sendFile(path.join(__dirname, "frontend", "View", "recuperar-senha.html"))
 })
 
 // Middleware para rotas não encontradas na API

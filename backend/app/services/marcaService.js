@@ -1,62 +1,68 @@
-const MarcaModel = require("../models/marcaModel")
+const marcaModel = require("../models/marcaModel")
 
-class MarcaService {
-  static async criarMarca(dadosMarca) {
-    // Verificar se marca já existe
-    const marcaExistente = await MarcaModel.buscarPorNome(dadosMarca.nome)
-    if (marcaExistente) {
-      throw new Error("Marca com este nome já existe")
-    }
+console.log(" Service: marcaModel importado:", typeof marcaModel)
+console.log(" Service: métodos disponíveis:", Object.keys(marcaModel))
 
-    const marcaId = await MarcaModel.criar(dadosMarca)
-    return await MarcaModel.buscarPorId(marcaId)
-  }
-
-  static async buscarMarcaPorId(id) {
-    const marca = await MarcaModel.buscarPorId(id)
-    if (!marca) {
-      throw new Error("Marca não encontrada")
-    }
-    return marca
-  }
-
-  static async listarMarcas(incluirInativos = false) {
-    return await MarcaModel.buscarTodos(incluirInativos)
-  }
-
-  static async atualizarMarca(id, dadosMarca) {
-    const marcaExistente = await MarcaModel.buscarPorId(id)
-    if (!marcaExistente) {
-      throw new Error("Marca não encontrada")
-    }
-
-    // Verificar se outro registro já usa este nome
-    const marcaComMesmoNome = await MarcaModel.buscarPorNome(dadosMarca.nome)
-    if (marcaComMesmoNome && marcaComMesmoNome.marca_id !== Number.parseInt(id)) {
-      throw new Error("Marca com este nome já existe")
-    }
-
-    const sucesso = await MarcaModel.atualizar(id, dadosMarca)
-    if (!sucesso) {
-      throw new Error("Erro ao atualizar marca")
-    }
-
-    return await MarcaModel.buscarPorId(id)
-  }
-
-  static async inativarMarca(id) {
-    const marca = await MarcaModel.buscarPorId(id)
-    if (!marca) {
-      throw new Error("Marca não encontrada")
-    }
-
-    const sucesso = await MarcaModel.inativar(id)
-    if (!sucesso) {
-      throw new Error("Erro ao inativar marca")
-    }
-
-    return { message: "Marca inativada com sucesso" }
-  }
+const getAllMarcas = async () => {
+  console.log(" Service: getAllMarcas chamado")
+  return await marcaModel.findAll()
 }
 
-module.exports = MarcaService
+const createMarca = async (marcaData) => {
+  console.log(" Service: createMarca chamado")
+  return await marcaModel.create(marcaData)
+}
+
+const updateMarca = async (id, marcaData) => {
+  console.log(" Service: updateMarca chamado")
+  const result = await marcaModel.update(id, marcaData)
+  if (result.affectedRows === 0) throw new Error("Marca não encontrada.")
+  return { message: "Marca atualizada com sucesso" }
+}
+
+// Manter método antigo para compatibilidade
+const deleteMarca = async (id) => {
+  console.log(" Service: deleteMarca chamado")
+  const result = await marcaModel.remove(id)
+  if (result.affectedRows === 0) throw new Error("Marca não encontrada.")
+  return { message: "Marca inativada com sucesso" }
+}
+
+// Novo método específico para alteração de status
+const updateMarcaStatus = async (id, status) => {
+  console.log("🔄 Service: alterando apenas status da marca ID:", id, "para:", status)
+
+  // Verificar se a marca existe
+  const marcas = await marcaModel.findAll()
+  const marcaExiste = marcas.find((m) => m.marca_id == id)
+
+  if (!marcaExiste) {
+    throw new Error("Marca não encontrada")
+  }
+
+  // Converter para boolean/int consistente
+  const novoStatus = status === true || status === 1 || status === "1" ? 1 : 0
+  console.log("🔄 Service: convertendo status para:", novoStatus)
+
+  // Fazer o update apenas do campo status
+  const result = await marcaModel.updateStatus(id, novoStatus)
+
+  if (result.affectedRows === 0) {
+    throw new Error("Marca não encontrada")
+  }
+
+  // Retornar a marca atualizada
+  const marcasAtualizadas = await marcaModel.findAll()
+  const marcaAtualizada = marcasAtualizadas.find((m) => m.marca_id == id)
+
+  console.log("✅ Service: status alterado com sucesso:", marcaAtualizada)
+  return marcaAtualizada
+}
+
+module.exports = {
+  getAllMarcas,
+  createMarca,
+  updateMarca,
+  deleteMarca,
+  updateMarcaStatus, // Novo método
+}

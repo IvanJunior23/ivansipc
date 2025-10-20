@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}} - SIPC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/css/common.css">
+    <style>
+        /* Adding permission alert styles */
+        .permission-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .readonly-banner {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 8px 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .readonly-banner i {
+            margin-right: 8px;
+        }
+        
+        .access-denied-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .access-denied-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .access-denied-modal .icon {
+            font-size: 48px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        
+        .access-denied-modal h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .access-denied-modal p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .btn-return {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .btn-return:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+     Adding permission check overlay 
+    <div id="permission-check-overlay" style="display: none;">
+        <div class="access-denied-overlay">
+            <div class="access-denied-modal">
+                <div class="icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Acesso Negado</h3>
+                <p>Você não tem permissão para acessar esta página. Entre em contato com o administrador se precisar de acesso.</p>
+                <button class="btn-return" onclick="returnToDashboard()">
+                    <i class="fas fa-home"></i> Voltar ao Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+     Adding readonly banner 
+    <div id="readonly-banner" style="display: none;" class="readonly-banner">
+        <i class="fas fa-eye"></i>
+        Você está visualizando esta página em modo somente leitura
+    </div>
+
+     Page content goes here 
+    <div id="page-content">
+        {{PAGE_CONTENT}}
+    </div>
+
+     Updated script loading order with permission system 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/permissions.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/common.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Iniciando verificação de permissões da página...');
+            
+            // Aguarda o carregamento dos sistemas de auth e permissões
+            setTimeout(() => {
+                checkPagePermissions();
+            }, 200);
+        });
+        
+        function checkPagePermissions() {
+            if (typeof auth === 'undefined' || typeof PermissionManager === 'undefined') {
+                console.warn('Sistemas de auth ou permissões não carregados');
+                return;
+            }
+            
+            if (!auth.isAuthenticated()) {
+                console.log('Usuário não autenticado, redirecionando...');
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            const user = auth.user;
+            if (!user || !user.tipo_usuario) {
+                console.error('Dados do usuário inválidos');
+                showAccessDenied();
+                return;
+            }
+            
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+            console.log(`Verificando acesso para ${user.tipo_usuario} na página ${currentPage}`);
+            
+            // Verifica se tem acesso à página
+            if (!PermissionManager.hasPageAccess(user.tipo_usuario, currentPage)) {
+                console.warn(`Acesso negado para ${user.tipo_usuario} na página ${currentPage}`);
+                showAccessDenied();
+                return;
+            }
+            
+            // Verifica se é acesso somente leitura
+            if (PermissionManager.isReadOnly(user.tipo_usuario, currentPage)) {
+                console.log('Página em modo somente leitura');
+                showReadOnlyBanner();
+                disableFormElements();
+            }
+            
+            console.log('Permissões verificadas com sucesso');
+        }
+        
+        function showAccessDenied() {
+            const overlay = document.getElementById('permission-check-overlay');
+            if (overlay) {
+                overlay.style.display = 'block';
+            }
+            
+            // Esconde o conteúdo da página
+            const pageContent = document.getElementById('page-content');
+            if (pageContent) {
+                pageContent.style.display = 'none';
+            }
+        }
+        
+        function showReadOnlyBanner() {
+            const banner = document.getElementById('readonly-banner');
+            if (banner) {
+                banner.style.display = 'block';
+            }
+        }
+        
+        function disableFormElements() {
+            // Desabilita todos os inputs, selects, textareas e buttons de submit
+            const formElements = document.querySelectorAll('input, select, textarea, button[type="submit"]');
+            formElements.forEach(element => {
+                element.disabled = true;
+                element.style.opacity = '0.6';
+                element.style.cursor = 'not-allowed';
+            });
+            
+            // Adiciona tooltips explicativos
+            formElements.forEach(element => {
+                element.title = 'Você tem acesso somente leitura a esta página';
+            });
+            
+            // Desabilita links de ação (que não sejam de navegação)
+            const actionLinks = document.querySelectorAll('a[href*="action"], a[href*="edit"], a[href*="delete"], a[href*="add"]');
+            actionLinks.forEach(link => {
+                link.style.opacity = '0.6';
+                link.style.pointerEvents = 'none';
+                link.title = 'Ação não permitida em modo somente leitura';
+            });
+        }
+        
+        function returnToDashboard() {
+            window.location.href = '/index.html';
+        }
+        
+        function checkPermissionForAction(action) {
+            if (!auth.isAuthenticated()) {
+                return false;
+            }
+            
+            const user = auth.user;
+            if (!user || !user.tipo_usuario) {
+                return false;
+            }
+            
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+            
+            // Se não tem acesso à página, não pode fazer ações
+            if (!PermissionManager.hasPageAccess(user.tipo_usuario, currentPage)) {
+                return false;
+            }
+            
+            // Se é readonly, não pode fazer ações de modificação
+            if (PermissionManager.isReadOnly(user.tipo_usuario, currentPage)) {
+                const readOnlyActions = ['create', 'edit', 'delete', 'update', 'save'];
+                if (readOnlyActions.includes(action.toLowerCase())) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        function showPermissionAlert(message, type = 'warning') {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show permission-alert" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Permissão Negada!</strong><br>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // Remove alertas anteriores
+            const existingAlerts = document.querySelectorAll('.permission-alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Adiciona o novo alerta
+            document.body.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Remove automaticamente após 5 segundos
+            setTimeout(() => {
+                const alert = document.querySelector('.permission-alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+        
+        // Exporta funções para uso global
+        window.checkPermissionForAction = checkPermissionForAction;
+        window.showPermissionAlert = showPermissionAlert;
+        window.returnToDashboard = returnToDashboard;
+    </script>
+</body>
+</html>

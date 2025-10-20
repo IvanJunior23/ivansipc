@@ -13,4 +13,6 @@ router.get("/:id", FornecedorController.buscarPorId)
 router.put("/:id", validarFornecedor, FornecedorController.atualizar)
 router.delete("/:id", FornecedorController.inativar)
 
+router.patch("/:id/status", FornecedorController.toggleStatus)
+
 module.exports = router

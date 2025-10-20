@@ -1,4 +1,4 @@
-const db = require("../../config/database")
+const { db } = require("../../config/database")
 
 class TrocaModel {
   static async criar(troca) {

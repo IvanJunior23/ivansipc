@@ -1,4 +1,4 @@
-const db = require("../../config/database")
+const { db } = require("../../config/database")
 
 class ClienteModel {
   static async criar(cliente) {
@@ -90,9 +90,27 @@ class ClienteModel {
     return result.affectedRows > 0
   }
 
+  static async ativar(id) {
+    const query = "UPDATE cliente SET status = true WHERE cliente_id = ?"
+    const [result] = await db.execute(query, [id])
+    return result.affectedRows > 0
+  }
+
+  static async toggleStatus(id, status) {
+    const query = "UPDATE cliente SET status = ? WHERE cliente_id = ?"
+    const [result] = await db.execute(query, [status, id])
+    return result.affectedRows > 0
+  }
+
   static async buscarPorCpf(cpf) {
     const query = "SELECT * FROM cliente WHERE cpf = ?"
     const [rows] = await db.execute(query, [cpf])
+    return rows[0]
+  }
+
+  static async buscarPorPessoaId(pessoaId) {
+    const query = "SELECT * FROM cliente WHERE pessoa_id = ?"
+    const [rows] = await db.execute(query, [pessoaId])
     return rows[0]
   }
 }

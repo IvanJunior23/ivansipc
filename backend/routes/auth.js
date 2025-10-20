@@ -53,12 +53,7 @@ router.post("/refresh", authenticateToken, (req, res) => {
 })
 
 // Logout
-router.post("/logout", authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    message: "Logout realizado com sucesso",
-  })
-})
+router.post("/logout", authenticateToken, authController.logout)
 
 router.get("/test", (req, res) => {
   res.json({ success: true, message: "Rota de auth funcionando!" })
@@ -67,34 +62,34 @@ router.get("/test", (req, res) => {
 // Debug route - adicionar antes do module.exports
 router.get("/debug-login/:email", async (req, res) => {
   try {
-    const userModel = require("../app/models/userModel");
-    const bcrypt = require("bcryptjs");
-    
-    const email = req.params.email;
-    const user = await userModel.findByEmail(email);
-    
+    const userModel = require("../app/models/userModel")
+    const bcrypt = require("bcryptjs")
+
+    const email = req.params.email
+    const user = await userModel.findByEmail(email)
+
     if (!user) {
-      return res.json({ found: false, email });
+      return res.json({ found: false, email })
     }
-    
+
     // Testar senhas comuns
-    const senhasComuns = ['123456', 'admin', 'password', 'sipc123'];
-    const resultados = {};
-    
+    const senhasComuns = ["123456", "admin", "password", "sipc123"]
+    const resultados = {}
+
     for (const senha of senhasComuns) {
       try {
-        const bcryptResult = await bcrypt.compare(senha, user.senha);
-        const plainResult = (senha === user.senha);
-        
+        const bcryptResult = await bcrypt.compare(senha, user.senha)
+        const plainResult = senha === user.senha
+
         resultados[senha] = {
           bcrypt: bcryptResult,
-          plain: plainResult
-        };
+          plain: plainResult,
+        }
       } catch (error) {
-        resultados[senha] = { error: error.message };
+        resultados[senha] = { error: error.message }
       }
     }
-    
+
     res.json({
       found: true,
       user: {
@@ -103,16 +98,13 @@ router.get("/debug-login/:email", async (req, res) => {
         email: user.email,
         status: user.status,
         senhaHash: user.senha?.substring(0, 20) + "...",
-        senhaLength: user.senha?.length
+        senhaLength: user.senha?.length,
       },
-      testResults: resultados
-    });
-    
+      testResults: resultados,
+    })
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message })
   }
-});
-
-
+})
 
 module.exports = router
