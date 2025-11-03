@@ -2,6 +2,8 @@
 let compras = []
 let fornecedores = []
 let pecas = []
+let categorias = [] // Added for part creation
+let marcas = [] // Added for part creation
 let editingCompraId = null
 let currentViewCompraId = null
 
@@ -66,6 +68,8 @@ document.addEventListener("DOMContentLoaded", () => {
   loadCompras()
   loadFornecedores()
   loadPecas()
+  loadCategorias() // Added
+  loadMarcas() // Added
 })
 
 // Load purchases from API
@@ -128,6 +132,10 @@ async function loadFornecedores() {
       option.textContent = fornecedor.nome
       select.appendChild(option)
     })
+
+    select.addEventListener("change", function () {
+      filterPecasByFornecedor(this.value)
+    })
   } catch (error) {
     console.error("Erro ao carregar fornecedores:", error)
   }
@@ -151,6 +159,76 @@ async function loadPecas() {
     pecas = result.data || result
   } catch (error) {
     console.error("Erro ao carregar peças:", error)
+  }
+}
+
+// Load categories for part creation
+async function loadCategorias() {
+  try {
+    const token = getToken()
+    if (!token) return
+
+    const response = await fetch("/api/categorias", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) return
+
+    const result = await response.json()
+    categorias = result.data || result
+
+    // Populate category select in part modal
+    const select = document.getElementById("compraPecaCategoria")
+    if (select) {
+      select.innerHTML = '<option value="">Selecione a categoria</option>'
+      categorias
+        .filter((cat) => cat.status === 1 || cat.status === true)
+        .forEach((categoria) => {
+          const option = document.createElement("option")
+          option.value = categoria.categoria_id
+          option.textContent = categoria.nome
+          select.appendChild(option)
+        })
+    }
+  } catch (error) {
+    console.error("Erro ao carregar categorias:", error)
+  }
+}
+
+// Load brands for part creation
+async function loadMarcas() {
+  try {
+    const token = getToken()
+    if (!token) return
+
+    const response = await fetch("/api/marcas", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) return
+
+    const result = await response.json()
+    marcas = result.data || result
+
+    // Populate brand select in part modal
+    const select = document.getElementById("compraPecaMarca")
+    if (select) {
+      select.innerHTML = '<option value="">Selecione a marca</option>'
+      marcas
+        .filter((marca) => marca.status === 1 || marca.status === true)
+        .forEach((marca) => {
+          const option = document.createElement("option")
+          option.value = marca.marca_id
+          option.textContent = marca.nome
+          select.appendChild(option)
+        })
+    }
+  } catch (error) {
+    console.error("Erro ao carregar marcas:", error)
   }
 }
 
@@ -248,7 +326,7 @@ function renderFilteredComprasTable(filteredCompras) {
                 <button class="btn-sm btn-view" onclick="viewCompra(${compra.compra_id})" title="Visualizar">
                     <i class="fas fa-eye"></i>
                 </button>
-                $$
+                ${compra.status === "pendente" ? `` : ""}
             </td>
         `
     tbody.appendChild(row)
@@ -272,6 +350,9 @@ function addCompraItem() {
   const container = document.getElementById("compraItems")
   const itemIndex = container.children.length
 
+  // Get current supplier selection
+  const fornecedorId = document.getElementById("compraFornecedor").value
+
   const itemRow = document.createElement("div")
   itemRow.className = "item-row"
   itemRow.innerHTML = `
@@ -279,7 +360,6 @@ function addCompraItem() {
             <label>Peça *</label>
             <select name="items[${itemIndex}][peca_id]" required onchange="updateItemPrice(this, ${itemIndex})">
                 <option value="">Selecione a peça</option>
-                ${pecas.map((peca) => `<option value="${peca.peca_id}" data-preco="${peca.preco_custo}">${peca.nome}</option>`).join("")}
             </select>
         </div>
         <div class="form-group">
@@ -300,6 +380,20 @@ function addCompraItem() {
     `
 
   container.appendChild(itemRow)
+
+  if (fornecedorId) {
+    filterPecasByFornecedor(fornecedorId)
+  } else {
+    // If no supplier selected, show all parts
+    const select = itemRow.querySelector('select[name*="peca_id"]')
+    pecas.forEach((peca) => {
+      const option = document.createElement("option")
+      option.value = peca.peca_id
+      option.setAttribute("data-preco", peca.preco_custo)
+      option.textContent = peca.nome
+      select.appendChild(option)
+    })
+  }
 }
 
 // Update item price when part is selected
@@ -581,7 +675,6 @@ async function receberCompra() {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         window.location.href = "/login.html"
@@ -620,7 +713,6 @@ async function deleteCompra(id) {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         window.location.href = "/login.html"
@@ -655,10 +747,170 @@ function closeViewCompraModal() {
   currentViewCompraId = null
 }
 
+// Added inline modal functions for supplier in purchase flow
+function showAddFornecedorCompraModal() {
+  document.getElementById("addFornecedorCompraForm").reset()
+  document.getElementById("addFornecedorCompraModal").style.display = "block"
+}
+
+function closeAddFornecedorCompraModal() {
+  document.getElementById("addFornecedorCompraModal").style.display = "none"
+}
+
+async function saveFornecedorCompra(event) {
+  event.preventDefault()
+
+  const formData = new FormData(event.target)
+  const data = {
+    nome: formData.get("nome"),
+    cnpj: formData.get("cnpj"),
+    telefone: formData.get("telefone"),
+    email: formData.get("email"),
+    logradouro: formData.get("logradouro"),
+    numero: formData.get("numero"),
+    complemento: formData.get("complemento") || "",
+    bairro: formData.get("bairro"),
+    cidade: formData.get("cidade"),
+    estado: formData.get("estado"),
+    cep: formData.get("cep"),
+    status: true,
+  }
+
+  console.log(" Creating supplier with data:", data)
+
+  try {
+    showLoading()
+    const token = getToken()
+    if (!token) return
+
+    const response = await fetch("/api/fornecedores", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        window.location.href = "/login.html"
+        return
+      }
+      const errorData = await response.json()
+      throw new Error(errorData.error || "Erro ao criar fornecedor")
+    }
+
+    const result = await response.json()
+    const newFornecedorId = result.data?.fornecedor_id || result.fornecedor_id
+
+    console.log(" Supplier created successfully with ID:", newFornecedorId)
+
+    showToast("Fornecedor criado com sucesso!", "success")
+    closeAddFornecedorCompraModal()
+
+    // Reload suppliers and select the new one
+    await loadFornecedores()
+    document.getElementById("compraFornecedor").value = newFornecedorId
+
+    filterPecasByFornecedor(newFornecedorId)
+  } catch (error) {
+    console.error("Erro ao criar fornecedor:", error)
+    showToast("Erro ao criar fornecedor: " + error.message, "error")
+  } finally {
+    hideLoading()
+  }
+}
+
+// Added inline modal functions for part in purchase flow
+function showAddPecaCompraModal() {
+  document.getElementById("addPecaCompraForm").reset()
+  document.getElementById("addPecaCompraModal").style.display = "block"
+}
+
+function closeAddPecaCompraModal() {
+  document.getElementById("addPecaCompraModal").style.display = "none"
+}
+
+async function savePecaCompra(event) {
+  event.preventDefault()
+
+  const formData = new FormData(event.target)
+  const data = {
+    codigo: formData.get("codigo"),
+    nome: formData.get("nome"),
+    descricao: formData.get("descricao") || "",
+    categoria_id: formData.get("categoria_id"),
+    marca_id: formData.get("marca_id"),
+    condicao: formData.get("condicao"),
+    quantidade_estoque: 0, // Start with 0, will be updated when purchase is received
+    estoque_minimo: formData.get("estoque_minimo") || 0,
+    preco_compra: formData.get("preco_compra"),
+    preco_venda: formData.get("preco_venda"),
+    status: true,
+  }
+
+  try {
+    showLoading()
+    const token = getToken()
+    if (!token) return
+
+    const response = await fetch("/api/pecas", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        window.location.href = "/login.html"
+        return
+      }
+      const errorData = await response.json()
+      throw new Error(errorData.error || "Erro ao criar peça")
+    }
+
+    const result = await response.json()
+    const newPecaId = result.data?.peca_id || result.peca_id
+
+    showToast("Peça criada com sucesso!", "success")
+    closeAddPecaCompraModal()
+
+    // Reload parts and add to the current purchase items
+    await loadPecas()
+
+    // Add a new item row with the new part pre-selected
+    addCompraItem()
+    const items = document.getElementById("compraItems").children
+    const lastItem = items[items.length - 1]
+    const pecaSelect = lastItem.querySelector('select[name*="peca_id"]')
+    if (pecaSelect) {
+      pecaSelect.value = newPecaId
+      // Trigger price update
+      const index = items.length - 1
+      updateItemPrice(pecaSelect, index)
+    }
+  } catch (error) {
+    console.error("Erro ao criar peça:", error)
+    showToast("Erro ao criar peça: " + error.message, "error")
+  } finally {
+    hideLoading()
+  }
+}
+
 // Close modal when clicking outside
 window.onclick = (event) => {
   const compraModal = document.getElementById("compraModal")
   const viewModal = document.getElementById("viewCompraModal")
+  const fornecedorCompraModal = document.getElementById("addFornecedorCompraModal") // Added
+  const pecaCompraModal = document.getElementById("addPecaCompraModal") // Added
 
   if (event.target === compraModal) {
     closeCompraModal()
@@ -666,4 +918,61 @@ window.onclick = (event) => {
   if (event.target === viewModal) {
     closeViewCompraModal()
   }
+  if (event.target === fornecedorCompraModal) {
+    // Added
+    closeAddFornecedorCompraModal()
+  }
+  if (event.target === pecaCompraModal) {
+    // Added
+    closeAddPecaCompraModal()
+  }
+}
+
+// Make functions globally accessible
+window.showAddFornecedorCompraModal = showAddFornecedorCompraModal
+window.closeAddFornecedorCompraModal = closeAddFornecedorCompraModal
+window.saveFornecedorCompra = saveFornecedorCompra
+window.showAddPecaCompraModal = showAddPecaCompraModal
+window.closeAddPecaCompraModal = closeAddPecaCompraModal
+window.savePecaCompra = savePecaCompra
+
+function filterPecasByFornecedor(fornecedorId) {
+  console.log(" Filtering parts by supplier:", fornecedorId)
+
+  // Get all part selects in the items container
+  const itemsContainer = document.getElementById("compraItems")
+  const partSelects = itemsContainer.querySelectorAll('select[name*="peca_id"]')
+
+  partSelects.forEach((select) => {
+    // Clear current options
+    select.innerHTML = '<option value="">Selecione a peça</option>'
+
+    // Filter parts
+    let filteredPecas = pecas
+    if (fornecedorId && fornecedorId !== "") {
+      // Only show parts linked to this supplier
+      filteredPecas = pecas.filter(
+        (peca) => peca.fornecedor_id && peca.fornecedor_id.toString() === fornecedorId.toString(),
+      )
+
+      console.log(" Filtered parts count:", filteredPecas.length)
+
+      if (filteredPecas.length === 0) {
+        const option = document.createElement("option")
+        option.value = ""
+        option.textContent = "Nenhuma peça vinculada a este fornecedor"
+        option.disabled = true
+        select.appendChild(option)
+      }
+    }
+
+    // Populate with filtered parts
+    filteredPecas.forEach((peca) => {
+      const option = document.createElement("option")
+      option.value = peca.peca_id
+      option.setAttribute("data-preco", peca.preco_custo)
+      option.textContent = peca.nome
+      select.appendChild(option)
+    })
+  })
 }

@@ -475,6 +475,13 @@
         .text-center {
             text-align: center;
         }
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -548,7 +555,6 @@
         <div class="card">
             <div class="card-header">
                 <h3>Lista de Peças</h3>
-               
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -588,8 +594,14 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="pecaCodigo">Código da Peça *</label>
-                            <input type="text" id="pecaCodigo" name="codigo" maxlength="50" required>
-                            <small class="field-info">Máximo 50 caracteres</small>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="pecaCodigo" name="codigo" maxlength="50" required style="flex: 1;" data-auto-generated="false">
+                                <!-- Made button optional - code auto-generates on category/brand selection -->
+                                <button type="button" class="btn-secondary" onclick="gerarCodigoAutomatico()" style="padding: 12px 20px; white-space: nowrap;" title="Gerar novo código manualmente">
+                                    <i class="fas fa-sync-alt"></i> Regerar
+                                </button>
+                            </div>
+                            <small class="field-info">O código é gerado automaticamente ao selecionar categoria e marca</small>
                         </div>
                         <div class="form-group">
                             <label for="pecaNome">Nome da Peça *</label>
@@ -601,17 +613,44 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="pecaCategoria">Categoria *</label>
-                            <select id="pecaCategoria" name="categoria_id" required>
-                                <option value="">Selecione a categoria</option>
-                            </select>
+                            <!-- Added button to create new category inline -->
+                            <div style="display: flex; gap: 10px;">
+                                <select id="pecaCategoria" name="categoria_id" required style="flex: 1;">
+                                    <option value="">Selecione a categoria</option>
+                                </select>
+                                <button type="button" class="btn-primary" onclick="showAddCategoriaInlineModal()" style="padding: 12px 16px; white-space: nowrap;" title="Adicionar nova categoria">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                             <small class="field-info">Apenas categorias ativas são exibidas</small>
                         </div>
                         <div class="form-group">
                             <label for="pecaMarca">Marca *</label>
-                            <select id="pecaMarca" name="marca_id" required>
-                                <option value="">Selecione a marca</option>
-                            </select>
+                            <!-- Added button to create new brand inline -->
+                            <div style="display: flex; gap: 10px;">
+                                <select id="pecaMarca" name="marca_id" required style="flex: 1;">
+                                    <option value="">Selecione a marca</option>
+                                </select>
+                                <button type="button" class="btn-primary" onclick="showAddMarcaInlineModal()" style="padding: 12px 16px; white-space: nowrap;" title="Adicionar nova marca">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                             <small class="field-info">Apenas marcas ativas são exibidas</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pecaFornecedor">Fornecedor Preferencial</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="pecaFornecedor" name="fornecedor_id" style="flex: 1;">
+                                    <option value="">Selecione o fornecedor (opcional)</option>
+                                </select>
+                                <button type="button" class="btn-primary" onclick="showAddFornecedorInlineModal()" style="padding: 12px 16px; white-space: nowrap;" title="Adicionar novo fornecedor">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <small class="field-info">Fornecedor preferencial para recompra desta peça</small>
                         </div>
                     </div>
 
@@ -662,15 +701,29 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="pecaImagemPrincipal">Imagem Principal *</label>
-                        <select id="pecaImagemPrincipal" name="imagem_principal_id" required>
-                            <option value="">Selecione uma imagem</option>
-                        </select>
-                        <small class="field-info">Apenas imagens ativas são exibidas. Gerencie imagens na página de Imagens.</small>
-                        <div id="pecaImagemNome" style="display: none; margin-top: 10px; padding: 12px; background-color: #e7f3ff; border-radius: 6px; border: 1px solid #b8daff;">
-                            <strong style="color: #004085;">Imagem atual:</strong> <span id="pecaImagemNomeText" style="color: #004085; font-weight: 500;"></span>
-                            <br>
-                            <small style="color: #004085; font-style: italic;">A imagem não pode ser alterada após o cadastro.</small>
+                        <label>Imagens da Peça</label>
+                        <!-- Added button to upload new image inline -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <select id="pecaImagemSelect" style="flex: 1;">
+                                <option value="">Selecione uma imagem para adicionar</option>
+                            </select>
+                            <button type="button" class="btn-primary" onclick="adicionarImagemPeca()" style="padding: 12px 20px; white-space: nowrap;">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                            <button type="button" class="btn-primary" onclick="showUploadImagemInlineModal()" style="padding: 12px 16px; white-space: nowrap;" title="Fazer upload de nova imagem">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                        </div>
+                        <small class="field-info">Selecione imagens da lista e clique em "Adicionar". A primeira imagem será a principal.</small>
+                        
+                        <!-- Container for selected images -->
+                        <div id="imagensSelecionadas" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 15px;">
+                            <!-- Images will be added here dynamically -->
+                        </div>
+                        
+                        <div id="nenhumaImagemMsg" style="display: none; padding: 20px; text-align: center; background-color: #f8f9fa; border-radius: 8px; margin-top: 15px;">
+                            <i class="fas fa-images" style="font-size: 32px; color: #6c757d; margin-bottom: 10px;"></i>
+                            <p style="color: #6c757d; margin: 0;">Nenhuma imagem selecionada</p>
                         </div>
                     </div>
                 </div>
@@ -726,21 +779,240 @@
         </div>
     </div>
     
+    <!-- Added inline modal for creating new category -->
+    <div id="addCategoriaInlineModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Nova Categoria</h3>
+                <span class="close" onclick="closeAddCategoriaInlineModal()">&times;</span>
+            </div>
+            <form id="addCategoriaInlineForm" onsubmit="saveCategoriaInline(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inlineCategoriaNome">Nome da Categoria *</label>
+                        <input type="text" id="inlineCategoriaNome" name="nome" maxlength="100" required>
+                        <small class="field-info">Máximo 100 caracteres</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="inlineCategoriaDescricao">Descrição</label>
+                        <textarea id="inlineCategoriaDescricao" name="descricao" maxlength="255" rows="3"></textarea>
+                        <small class="field-info">Máximo 255 caracteres</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAddCategoriaInlineModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Categoria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Added inline modal for creating new brand -->
+    <div id="addMarcaInlineModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Nova Marca</h3>
+                <span class="close" onclick="closeAddMarcaInlineModal()">&times;</span>
+            </div>
+            <form id="addMarcaInlineForm" onsubmit="saveMarcaInline(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inlineMarcaNome">Nome da Marca *</label>
+                        <input type="text" id="inlineMarcaNome" name="nome" maxlength="100" required>
+                        <small class="field-info">Máximo 100 caracteres</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="inlineMarcaDescricao">Descrição</label>
+                        <textarea id="inlineMarcaDescricao" name="descricao" maxlength="255" rows="3"></textarea>
+                        <small class="field-info">Máximo 255 caracteres</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAddMarcaInlineModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Marca</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Added inline modal for uploading new image -->
+    <div id="uploadImagemInlineModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Upload de Imagem</h3>
+                <span class="close" onclick="closeUploadImagemInlineModal()">&times;</span>
+            </div>
+            <form id="uploadImagemInlineForm" onsubmit="saveImagemInline(event)" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inlineImagemArquivo">Arquivo de Imagem *</label>
+                        <input type="file" id="inlineImagemArquivo" name="imagens" accept="image/*" required style="padding: 8px;">
+                        <small class="field-info">Formatos aceitos: JPG, PNG, GIF, WebP</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="inlineImagemDescricao">Descrição *</label>
+                        <input type="text" id="inlineImagemDescricao" name="descricao" maxlength="255" required>
+                        <small class="field-info">Máximo 255 caracteres</small>
+                    </div>
+                    <div id="imagePreview" style="margin-top: 15px; display: none;">
+                        <label>Preview:</label>
+                        <img id="previewImg" src="/placeholder.svg" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 10px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeUploadImagemInlineModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Fazer Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Updated inline modal for creating new supplier -->
+    <div id="addFornecedorInlineModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Novo Fornecedor</h3>
+                <span class="close" onclick="closeAddFornecedorInlineModal()">&times;</span>
+            </div>
+            <form id="addFornecedorInlineForm" onsubmit="saveFornecedorInline(event)">
+                <div class="modal-body">
+                    <!-- Dados da Empresa -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Dados da Empresa</h4>
+                        
+                        <div class="form-group">
+                            <label for="inlineFornecedorNome">Razão Social *</label>
+                            <input type="text" id="inlineFornecedorNome" name="nome" maxlength="100" required>
+                            <small class="field-info">Nome completo da empresa</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inlineFornecedorCnpj">CNPJ *</label>
+                            <input type="text" id="inlineFornecedorCnpj" name="cnpj" maxlength="18" placeholder="00.000.000/0000-00" required>
+                            <small class="field-info">Formato: 00.000.000/0000-00</small>
+                        </div>
+                    </div>
+
+                    <!-- Contato -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Contato</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="inlineFornecedorTelefone">Telefone *</label>
+                                <input type="text" id="inlineFornecedorTelefone" name="telefone" maxlength="15" placeholder="(00) 00000-0000" required>
+                                <small class="field-info">Telefone principal</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="inlineFornecedorEmail">E-mail *</label>
+                                <input type="email" id="inlineFornecedorEmail" name="email" maxlength="100" required>
+                                <small class="field-info">E-mail para contato</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Endereço -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Endereço</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="inlineFornecedorLogradouro">Logradouro *</label>
+                                <input type="text" id="inlineFornecedorLogradouro" name="logradouro" maxlength="100" required>
+                                <small class="field-info">Rua, avenida, etc.</small>
+                            </div>
+
+                            <div class="form-group" style="flex: 1;">
+                                <label for="inlineFornecedorNumero">Número *</label>
+                                <input type="text" id="inlineFornecedorNumero" name="numero" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="inlineFornecedorComplemento">Complemento</label>
+                                <input type="text" id="inlineFornecedorComplemento" name="complemento" maxlength="50">
+                                <small class="field-info">Opcional</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="inlineFornecedorBairro">Bairro *</label>
+                                <input type="text" id="inlineFornecedorBairro" name="bairro" maxlength="50" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="inlineFornecedorCidade">Cidade *</label>
+                                <input type="text" id="inlineFornecedorCidade" name="cidade" maxlength="50" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="inlineFornecedorEstado">Estado *</label>
+                                <select id="inlineFornecedorEstado" name="estado" required>
+                                    <option value="">Selecione</option>
+                                    <option value="AC">AC</option>
+                                    <option value="AL">AL</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AM">AM</option>
+                                    <option value="BA">BA</option>
+                                    <option value="CE">CE</option>
+                                    <option value="DF">DF</option>
+                                    <option value="ES">ES</option>
+                                    <option value="GO">GO</option>
+                                    <option value="MA">MA</option>
+                                    <option value="MT">MT</option>
+                                    <option value="MS">MS</option>
+                                    <option value="MG">MG</option>
+                                    <option value="PA">PA</option>
+                                    <option value="PB">PB</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PE">PE</option>
+                                    <option value="PI">PI</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="RN">RN</option>
+                                    <option value="RS">RS</option>
+                                    <option value="RO">RO</option>
+                                    <option value="RR">RR</option>
+                                    <option value="SC">SC</option>
+                                    <option value="SP">SP</option>
+                                    <option value="SE">SE</option>
+                                    <option value="TO">TO</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="inlineFornecedorCep">CEP *</label>
+                                <input type="text" id="inlineFornecedorCep" name="cep" maxlength="9" placeholder="00000-000" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAddFornecedorInlineModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Fornecedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script src="../assets/js/permissions.js"></script>
-    <script src="../assets/js/page-permissions.js"></script>
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/common.js"></script>
     <script src="../assets/js/pecas.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', async function() {
-    console.log(" Iniciando verificação de permissões para a página atual");
-    if (!window.auth.initialized) {
-        setTimeout(async () => {
+        console.log(" Iniciando verificação de permissões para a página atual");
+        if (!window.auth.initialized) {
+            setTimeout(async () => {
+                await initPageWithPermissions();
+            }, 500);
+        } else {
             await initPageWithPermissions();
-        }, 500);
-    } else {
-        await initPageWithPermissions();
-    }
+        }
+    });
+
     async function initPageWithPermissions() {
         const currentPage = window.location.pathname.split('/').pop();
 
@@ -777,27 +1049,27 @@
         addLogoutButton();
     }
         
-        function updateUserInfo(user) {
-            const userNameEl = document.querySelector('.user-name');
-            const userRoleEl = document.querySelector('.user-role');
-            if (userNameEl && userRoleEl) {
-                userNameEl.textContent = user.nome || 'Usuário';
-                userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
-            }
+    function updateUserInfo(user) {
+        const userNameEl = document.querySelector('.user-name');
+        const userRoleEl = document.querySelector('.user-role');
+        if (userNameEl && userRoleEl) {
+            userNameEl.textContent = user.nome || 'Usuário';
+            userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
         }
-        
-        function addLogoutButton() {
-            const userInfo = document.querySelector('.user-info');
-            if (userInfo && !userInfo.querySelector('.logout-btn')) {
-                const logoutBtn = document.createElement('button');
-                logoutBtn.className = 'logout-btn';
-                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
-                logoutBtn.onclick = () => auth.logout();
-                logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-                userInfo.appendChild(logoutBtn);
-            }
+    }
+    
+    function addLogoutButton() {
+        const userInfo = document.querySelector('.user-info');
+        if (userInfo && !userInfo.querySelector('.logout-btn')) {
+            const logoutBtn = document.createElement('button');
+            logoutBtn.className = 'logout-btn';
+            logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
+            logoutBtn.onclick = () => auth.logout();
+            logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
+            userInfo.appendChild(logoutBtn);
         }
-    });
+    }
     </script>
 </body>
 </html>
+    

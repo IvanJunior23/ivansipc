@@ -6,6 +6,8 @@ const { authenticateToken } = require("../middleware/auth")
 
 router.use(authenticateToken)
 
+router.get("/gerar-codigo", pecaController.gerarCodigo)
+
 router.post("/", validarPeca, pecaController.create)
 router.get("/", pecaController.list)
 router.get("/:id", pecaController.getById)
@@ -17,5 +19,7 @@ router.patch("/:id/status", pecaController.toggleStatus)
 router.post("/:id/imagens", pecaController.vincularImagem)
 router.get("/:id/imagens", pecaController.buscarImagens)
 router.delete("/:id/imagens/:imagemId", pecaController.removerImagem)
+
+router.get("/fornecedor/:fornecedorId", pecaController.getByFornecedor)
 
 module.exports = router

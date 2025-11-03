@@ -66,7 +66,6 @@ const getById = async (req, res, next) => {
 
 const uploadMultiple = async (req, res, next) => {
   try {
-    // Usar middleware do multer para múltiplos arquivos
     upload.array("imagens", 10)(req, res, async (err) => {
       if (err) {
         console.error("❌ Controller: erro no upload:", err)
@@ -79,9 +78,11 @@ const uploadMultiple = async (req, res, next) => {
 
       console.log("📁 Controller: arquivos recebidos:", req.files.length)
 
-      const imagensData = req.files.map((file) => ({
+      const descricao = req.body.descricao || ""
+
+      const imagensData = req.files.map((file, index) => ({
         referencia_url: `/uploads/images/${file.filename}`,
-        descricao: req.body.descricao || `Imagem ${file.originalname}`,
+        descricao: descricao || `Imagem ${file.originalname}`,
         status: true,
         created_by: req.user.id,
       }))

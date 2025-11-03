@@ -506,9 +506,15 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="compraFornecedor">Fornecedor *</label>
-                            <select id="compraFornecedor" name="fornecedor_id" required>
-                                <option value="">Selecione o fornecedor</option>
-                            </select>
+                            <!-- Added inline button to create supplier -->
+                            <div style="display: flex; gap: 10px;">
+                                <select id="compraFornecedor" name="fornecedor_id" required style="flex: 1;">
+                                    <option value="">Selecione o fornecedor</option>
+                                </select>
+                                <button type="button" class="btn-primary" onclick="showAddFornecedorCompraModal()" style="padding: 12px 16px; white-space: nowrap;" title="Adicionar novo fornecedor">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="compraData">Data da Compra *</label>
@@ -525,9 +531,15 @@
                     <div class="items-section">
                         <div class="section-header">
                             <h4>Itens da Compra</h4>
-                            <button type="button" class="btn-secondary" onclick="addCompraItem()">
-                                <i class="fas fa-plus"></i> Adicionar Item
-                            </button>
+                            <!-- Added inline button to create part -->
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" class="btn-primary" onclick="showAddPecaCompraModal()" style="padding: 8px 15px; white-space: nowrap;" title="Adicionar nova peça">
+                                    <i class="fas fa-box"></i> Nova Peça
+                                </button>
+                                <button type="button" class="btn-secondary" onclick="addCompraItem()">
+                                    <i class="fas fa-plus"></i> Adicionar Item
+                                </button>
+                            </div>
                         </div>
                         <div id="compraItems" class="items-container">
                         </div>
@@ -590,6 +602,211 @@
             </form>
         </div>
     </div>
+
+    <!-- Updated inline modal for creating new supplier with complete form -->
+    <div id="addFornecedorCompraModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Novo Fornecedor</h3>
+                <span class="close" onclick="closeAddFornecedorCompraModal()">&times;</span>
+            </div>
+            <form id="addFornecedorCompraForm" onsubmit="saveFornecedorCompra(event)">
+                <div class="modal-body">
+                    <!-- Dados da Empresa -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 15px 0; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Dados da Empresa</h4>
+                        
+                        <div class="form-group">
+                            <label for="compraFornecedorNome">Razão Social *</label>
+                            <input type="text" id="compraFornecedorNome" name="nome" maxlength="100" required>
+                            <small class="field-info">Nome completo da empresa</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="compraFornecedorCnpj">CNPJ *</label>
+                            <input type="text" id="compraFornecedorCnpj" name="cnpj" maxlength="18" placeholder="00.000.000/0000-00" required>
+                            <small class="field-info">Formato: 00.000.000/0000-00</small>
+                        </div>
+                    </div>
+
+                    <!-- Contato -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 15px 0; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Contato</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="compraFornecedorTelefone">Telefone *</label>
+                                <input type="text" id="compraFornecedorTelefone" name="telefone" maxlength="15" placeholder="(00) 00000-0000" required>
+                                <small class="field-info">Telefone principal</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="compraFornecedorEmail">E-mail *</label>
+                                <input type="email" id="compraFornecedorEmail" name="email" maxlength="100" required>
+                                <small class="field-info">E-mail para contato</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Endereço -->
+                    <div style="border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 15px 0; background-color: #f8f9fa;">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Endereço</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="compraFornecedorLogradouro">Logradouro *</label>
+                                <input type="text" id="compraFornecedorLogradouro" name="logradouro" maxlength="100" required>
+                                <small class="field-info">Rua, avenida, etc.</small>
+                            </div>
+
+                            <div class="form-group" style="flex: 1;">
+                                <label for="compraFornecedorNumero">Número *</label>
+                                <input type="text" id="compraFornecedorNumero" name="numero" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="compraFornecedorComplemento">Complemento</label>
+                                <input type="text" id="compraFornecedorComplemento" name="complemento" maxlength="50">
+                                <small class="field-info">Opcional</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="compraFornecedorBairro">Bairro *</label>
+                                <input type="text" id="compraFornecedorBairro" name="bairro" maxlength="50" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="compraFornecedorCidade">Cidade *</label>
+                                <input type="text" id="compraFornecedorCidade" name="cidade" maxlength="50" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="compraFornecedorEstado">Estado *</label>
+                                <select id="compraFornecedorEstado" name="estado" required>
+                                    <option value="">Selecione</option>
+                                    <option value="AC">AC</option>
+                                    <option value="AL">AL</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AM">AM</option>
+                                    <option value="BA">BA</option>
+                                    <option value="CE">CE</option>
+                                    <option value="DF">DF</option>
+                                    <option value="ES">ES</option>
+                                    <option value="GO">GO</option>
+                                    <option value="MA">MA</option>
+                                    <option value="MT">MT</option>
+                                    <option value="MS">MS</option>
+                                    <option value="MG">MG</option>
+                                    <option value="PA">PA</option>
+                                    <option value="PB">PB</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PE">PE</option>
+                                    <option value="PI">PI</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="RN">RN</option>
+                                    <option value="RS">RS</option>
+                                    <option value="RO">RO</option>
+                                    <option value="RR">RR</option>
+                                    <option value="SC">SC</option>
+                                    <option value="SP">SP</option>
+                                    <option value="SE">SE</option>
+                                    <option value="TO">TO</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="compraFornecedorCep">CEP *</label>
+                                <input type="text" id="compraFornecedorCep" name="cep" maxlength="9" placeholder="00000-000" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAddFornecedorCompraModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Fornecedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Added inline modal for creating new part in purchase flow -->
+    <div id="addPecaCompraModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Nova Peça</h3>
+                <span class="close" onclick="closeAddPecaCompraModal()">&times;</span>
+            </div>
+            <form id="addPecaCompraForm" onsubmit="savePecaCompra(event)">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="compraPecaCodigo">Código da Peça *</label>
+                            <input type="text" id="compraPecaCodigo" name="codigo" maxlength="50" required>
+                            <small class="field-info">Máximo 50 caracteres</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="compraPecaNome">Nome da Peça *</label>
+                            <input type="text" id="compraPecaNome" name="nome" maxlength="200" required>
+                            <small class="field-info">Máximo 200 caracteres</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="compraPecaCategoria">Categoria *</label>
+                            <select id="compraPecaCategoria" name="categoria_id" required>
+                                <option value="">Selecione a categoria</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="compraPecaMarca">Marca *</label>
+                            <select id="compraPecaMarca" name="marca_id" required>
+                                <option value="">Selecione a marca</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="compraPecaDescricao">Descrição</label>
+                        <textarea id="compraPecaDescricao" name="descricao" maxlength="500" rows="2"></textarea>
+                        <small class="field-info">Máximo 500 caracteres</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="compraPecaCondicao">Condição *</label>
+                            <select id="compraPecaCondicao" name="condicao" required>
+                                <option value="">Selecione a condição</option>
+                                <option value="novo">Novo</option>
+                                <option value="usado">Usado</option>
+                                <option value="recondicionado">Recondicionado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="compraPecaEstoqueMinimo">Estoque Mínimo *</label>
+                            <input type="number" id="compraPecaEstoqueMinimo" name="estoque_minimo" min="0" value="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="compraPecaPrecoCompra">Preço de Compra *</label>
+                            <input type="number" id="compraPecaPrecoCompra" name="preco_compra" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="compraPecaPrecoVenda">Preço de Venda *</label>
+                            <input type="number" id="compraPecaPrecoVenda" name="preco_venda" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAddPecaCompraModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Criar Peça</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../assets/js/permissions.js"></script>
     <script src="../assets/js/page-permissions.js"></script>
     <script src="../assets/js/auth.js"></script>

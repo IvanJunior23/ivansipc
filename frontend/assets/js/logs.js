@@ -5,6 +5,7 @@ let currentFilters = {}
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
+  loadUsers()
   loadLogs()
   loadStats()
 
@@ -16,6 +17,35 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("filterDataInicio").value = weekAgo.toISOString().split("T")[0]
 })
 
+async function loadUsers() {
+  try {
+    const response = await fetch("http://localhost:3000/api/usuarios", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Erro ao carregar usuários")
+    }
+
+    const data = await response.json()
+    const users = data.data || []
+
+    const filterUsuario = document.getElementById("filterUsuario")
+
+    // Add users to dropdown
+    users.forEach((user) => {
+      const option = document.createElement("option")
+      option.value = user.usuario_id
+      option.textContent = user.nome || `Usuário ${user.usuario_id}`
+      filterUsuario.appendChild(option)
+    })
+  } catch (error) {
+    console.error("Erro ao carregar usuários:", error)
+  }
+}
+
 // Carregar logs
 async function loadLogs() {
   try {
@@ -25,6 +55,7 @@ async function loadLogs() {
 
     // Aplicar filtros
     if (currentFilters.acao) queryParams.append("acao", currentFilters.acao)
+    if (currentFilters.usuario_id) queryParams.append("usuario_id", currentFilters.usuario_id)
     if (currentFilters.data_inicio) queryParams.append("data_inicio", currentFilters.data_inicio)
     if (currentFilters.data_fim) queryParams.append("data_fim", currentFilters.data_fim)
     if (currentFilters.limit) queryParams.append("limit", currentFilters.limit)
@@ -105,17 +136,24 @@ function renderLogsTable() {
 
 // Aplicar filtros
 function applyFilters() {
+  console.log(" applyFilters chamado")
+
   currentFilters = {
     acao: document.getElementById("filterAcao").value,
+    usuario_id: document.getElementById("filterUsuario").value,
     data_inicio: document.getElementById("filterDataInicio").value,
     data_fim: document.getElementById("filterDataFim").value,
     limit: document.getElementById("filterLimit").value,
   }
 
+  console.log(" Filtros antes de limpar:", currentFilters)
+
   // Remove filtros vazios
   Object.keys(currentFilters).forEach((key) => {
     if (!currentFilters[key]) delete currentFilters[key]
   })
+
+  console.log(" Filtros após limpar:", currentFilters)
 
   loadLogs()
 }
@@ -168,65 +206,96 @@ async function showLogDetails(logId) {
     const data = await response.json()
     const log = data.data
 
+    let valoresAnterioresHTML = ""
+    let valoresNovosHTML = ""
+
+    if (log.valores_anteriores) {
+      valoresAnterioresHTML = `
+        <div style="margin-top: 20px;">
+          <h6 style="margin-bottom: 12px; color: #2C3E50; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-history" style="color: #e74c3c;"></i>
+            Valores Anteriores
+          </h6>
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            ${formatJsonAsFields(log.valores_anteriores)}
+          </div>
+        </div>
+      `
+    }
+
+    if (log.valores_novos) {
+      valoresNovosHTML = `
+        <div style="margin-top: 20px;">
+          <h6 style="margin-bottom: 12px; color: #2C3E50; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-check-circle" style="color: #28a745;"></i>
+            Valores Novos
+          </h6>
+          <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            ${formatJsonAsFields(log.valores_novos)}
+          </div>
+        </div>
+      `
+    }
+
     const modalContent = document.getElementById("logDetailsContent")
     modalContent.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <h6 style="margin-bottom: 10px; color: #2C3E50;">Informações Básicas</h6>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 20px;">
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <h6 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #1ABC9C; padding-bottom: 8px;">
+                        <i class="fas fa-info-circle" style="color: #1ABC9C;"></i>
+                        Informações Básicas
+                    </h6>
                     <table style="width: 100%; font-size: 14px;">
-                        <tr><td style="padding: 5px 0;"><strong>ID:</strong></td><td>${log.log_id}</td></tr>
-                        <tr><td style="padding: 5px 0;"><strong>Data/Hora:</strong></td><td>${formatDateTime(log.data_hora)}</td></tr>
-                        <tr><td style="padding: 5px 0;"><strong>Usuário:</strong></td><td>${log.usuario_nome || "Sistema"} ${log.usuario_id ? `(ID: ${log.usuario_id})` : ""}</td></tr>
-                        <tr><td style="padding: 5px 0;"><strong>Ação:</strong></td><td><span class="status-badge ${getActionBadgeClass(log.acao)}">${formatAction(log.acao)}</span></td></tr>
-                        <tr><td style="padding: 5px 0;"><strong>IP:</strong></td><td>${log.ip_origem || "-"}</td></tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-hashtag" style="width: 20px;"></i> ID:</td>
+                            <td style="padding: 8px 0; font-weight: 600;">${log.log_id}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-calendar-alt" style="width: 20px;"></i> Data/Hora:</td>
+                            <td style="padding: 8px 0;">${formatDateTime(log.data_hora)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-user" style="width: 20px;"></i> Usuário:</td>
+                            <td style="padding: 8px 0;">${log.usuario_nome || "Sistema"} ${log.usuario_id ? `<span style="color: #6c757d; font-size: 12px;">(ID: ${log.usuario_id})</span>` : ""}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-bolt" style="width: 20px;"></i> Ação:</td>
+                            <td style="padding: 8px 0;"><span class="status-badge ${getActionBadgeClass(log.acao)}">${formatAction(log.acao)}</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-network-wired" style="width: 20px;"></i> IP:</td>
+                            <td style="padding: 8px 0; font-family: monospace;">${log.ip_origem || "-"}</td>
+                        </tr>
                     </table>
                 </div>
-                <div>
-                    <h6 style="margin-bottom: 10px; color: #2C3E50;">Detalhes Adicionais</h6>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <h6 style="margin-bottom: 15px; color: #2C3E50; font-weight: 600; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
+                        <i class="fas fa-database" style="color: #3498db;"></i>
+                        Detalhes Adicionais
+                    </h6>
                     <table style="width: 100%; font-size: 14px;">
-                        <tr><td style="padding: 5px 0;"><strong>Tabela Afetada:</strong></td><td>${log.tabela_afetada || "-"}</td></tr>
-                        <tr><td style="padding: 5px 0;"><strong>Registro ID:</strong></td><td>${log.registro_id || "-"}</td></tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-table" style="width: 20px;"></i> Tabela:</td>
+                            <td style="padding: 8px 0; font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px;">${log.tabela_afetada || "-"}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6c757d; font-weight: 500;"><i class="fas fa-key" style="width: 20px;"></i> Registro ID:</td>
+                            <td style="padding: 8px 0; font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px;">${log.registro_id || "-"}</td>
+                        </tr>
                     </table>
                 </div>
             </div>
             <div style="margin-top: 20px;">
-                <h6 style="margin-bottom: 10px; color: #2C3E50;">Detalhes</h6>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
-                    <pre style="margin: 0; white-space: pre-wrap; font-size: 12px;">${log.detalhes}</pre>
+                <h6 style="margin-bottom: 12px; color: #2C3E50; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-alt" style="color: #6c757d;"></i>
+                    Detalhes da Operação
+                </h6>
+                <div style="background: #e9ecef; padding: 15px; border-radius: 5px; border-left: 4px solid #6c757d;">
+                    <pre style="margin: 0; white-space: pre-wrap; font-size: 13px; color: #495057; line-height: 1.6;">${log.detalhes}</pre>
                 </div>
             </div>
-            ${
-              log.valores_anteriores || log.valores_novos
-                ? `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                ${
-                  log.valores_anteriores
-                    ? `
-                <div>
-                    <h6 style="margin-bottom: 10px; color: #2C3E50;">Valores Anteriores</h6>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
-                        <pre style="margin: 0; white-space: pre-wrap; font-size: 11px;">${JSON.stringify(JSON.parse(log.valores_anteriores), null, 2)}</pre>
-                    </div>
-                </div>
-                `
-                    : ""
-                }
-                ${
-                  log.valores_novos
-                    ? `
-                <div>
-                    <h6 style="margin-bottom: 10px; color: #2C3E50;">Valores Novos</h6>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
-                        <pre style="margin: 0; white-space: pre-wrap; font-size: 11px;">${JSON.stringify(JSON.parse(log.valores_novos), null, 2)}</pre>
-                    </div>
-                </div>
-                `
-                    : ""
-                }
-            </div>
-            `
-                : ""
-            }
+            ${valoresAnterioresHTML}
+            ${valoresNovosHTML}
         `
 
     document.getElementById("logDetailsModal").style.display = "block"
@@ -472,4 +541,83 @@ function searchLogs() {
     `,
     )
     .join("")
+}
+
+function formatJsonAsFields(jsonData) {
+  if (!jsonData) return '<p style="color: #999; font-style: italic;">Nenhum dado disponível</p>'
+
+  try {
+    const data = typeof jsonData === "string" ? JSON.parse(jsonData) : jsonData
+
+    const fieldLabels = {
+      nome: "Nome",
+      nome_completo: "Nome Completo",
+      email: "E-mail",
+      telefone: "Telefone",
+      cpf: "CPF",
+      cnpj: "CNPJ",
+      status: "Status",
+      tipo_usuario: "Tipo de Usuário",
+      logradouro: "Logradouro",
+      numero: "Número",
+      complemento: "Complemento",
+      bairro: "Bairro",
+      cidade: "Cidade",
+      estado: "Estado",
+      cep: "CEP",
+      descricao: "Descrição",
+      preco_custo: "Preço de Custo",
+      preco_venda: "Preço de Venda",
+      quantidade_estoque: "Quantidade em Estoque",
+      estoque_minimo: "Estoque Mínimo",
+      categoria_id: "ID da Categoria",
+      marca_id: "ID da Marca",
+      fornecedor_id: "ID do Fornecedor",
+      imagem_url: "URL da Imagem",
+      codigo_barras: "Código de Barras",
+      modelo: "Modelo",
+      especificacoes: "Especificações",
+      garantia_meses: "Garantia (meses)",
+      peso: "Peso",
+      dimensoes: "Dimensões",
+      cor: "Cor",
+      voltagem: "Voltagem",
+      potencia: "Potência",
+      observacoes: "Observações",
+    }
+
+    const formatValue = (key, value) => {
+      if (value === null || value === undefined) return "-"
+      if (key === "status") return value ? "Ativo" : "Inativo"
+      if (key.includes("preco") || key.includes("custo") || key.includes("venda")) {
+        return `R$ ${Number.parseFloat(value).toFixed(2)}`
+      }
+      if (typeof value === "boolean") return value ? "Sim" : "Não"
+      if (typeof value === "object") return JSON.stringify(value)
+      return value
+    }
+
+    const fields = Object.entries(data)
+      .map(([key, value]) => {
+        const label = fieldLabels[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ")
+        const formattedValue = formatValue(key, value)
+
+        return `
+        <div style="display: flex; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
+          <div style="flex: 0 0 200px; font-weight: 600; color: #495057;">
+            ${label}:
+          </div>
+          <div style="flex: 1; color: #212529;">
+            ${formattedValue}
+          </div>
+        </div>
+      `
+      })
+      .join("")
+
+    return fields
+  } catch (error) {
+    console.error("Erro ao formatar JSON:", error)
+    return `<pre style="margin: 0; white-space: pre-wrap; font-size: 12px; color: #666;">${jsonData}</pre>`
+  }
 }

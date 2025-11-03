@@ -394,11 +394,7 @@
                 <i class="fas fa-plus"></i> Novo Cliente
             </button>
             <div class="filters">
-                <select id="filterTipoPessoa" onchange="filterClientes()">
-                    <option value="">Todos os Tipos</option>
-                    <option value="fisica">Pessoa Física</option>
-                    <option value="juridica">Pessoa Jurídica</option>
-                </select>
+                <!-- Removido filtro de tipo de pessoa (não aplicável para clientes) -->
                 <select id="filterStatus" onchange="filterClientes()">
                     <option value="">Todos os Status</option>
                     <option value="ativo">Ativo</option>
@@ -447,24 +443,115 @@
                 <div class="modal-body">
                     <input type="hidden" id="clienteId">
                     
-                    <!-- Substituindo todos os campos por apenas seletor de pessoa e CPF -->
-                    <div class="form-group">
-                        <label for="clientePessoa">Selecionar Pessoa *</label>
-                        <select id="clientePessoa" name="pessoa_id" required onchange="onPessoaSelected()">
-                            <option value="">Selecione uma pessoa</option>
-                        </select>
-                        <small class="field-info">Selecione a pessoa que será o cliente. Cadastre pessoas na tela de Pessoas.</small>
+                    <!-- Substituindo seletor de pessoa por campos completos -->
+                    <div class="person-fields">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Dados Pessoais</h4>
+                        
+                        <div class="form-group">
+                            <label for="clienteNome">Nome Completo *</label>
+                            <input type="text" id="clienteNome" name="nome" maxlength="100" required>
+                            <small class="field-info">Nome completo do cliente</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="clienteCpf">CPF *</label>
+                            <input type="text" id="clienteCpf" name="cpf" maxlength="14" placeholder="000.000.000-00" required>
+                            <small class="field-info">Formato: 000.000.000-00</small>
+                        </div>
                     </div>
 
-                    <div id="pessoaInfo" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                        <h4 style="margin: 0 0 10px 0; color: #2C3E50;">Dados da Pessoa Selecionada</h4>
-                        <p style="margin: 5px 0;"><strong>Nome:</strong> <span id="pessoaNome">-</span></p>
+                    <div class="person-fields">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Contato</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="clienteTelefone">Telefone *</label>
+                                <input type="text" id="clienteTelefone" name="telefone" maxlength="15" placeholder="(00) 00000-0000" required>
+                                <small class="field-info">Telefone principal</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clienteEmail">E-mail *</label>
+                                <input type="email" id="clienteEmail" name="email" maxlength="100" required>
+                                <small class="field-info">E-mail para contato</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="clienteCpf">CPF *</label>
-                        <input type="text" id="clienteCpf" name="cpf" maxlength="14" placeholder="000.000.000-00" required>
-                        <small class="field-info">Formato: 000.000.000-00</small>
+                    <div class="person-fields">
+                        <h4 style="margin: 0 0 15px 0; color: #2C3E50;">Endereço</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="clienteLogradouro">Logradouro *</label>
+                                <input type="text" id="clienteLogradouro" name="logradouro" maxlength="100" required>
+                                <small class="field-info">Rua, avenida, etc.</small>
+                            </div>
+
+                            <div class="form-group" style="flex: 1;">
+                                <label for="clienteNumero">Número *</label>
+                                <input type="text" id="clienteNumero" name="numero" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="clienteComplemento">Complemento</label>
+                                <input type="text" id="clienteComplemento" name="complemento" maxlength="50">
+                                <small class="field-info">Opcional</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clienteBairro">Bairro *</label>
+                                <input type="text" id="clienteBairro" name="bairro" maxlength="50" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="clienteCidade">Cidade *</label>
+                                <input type="text" id="clienteCidade" name="cidade" maxlength="50" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clienteEstado">Estado *</label>
+                                <select id="clienteEstado" name="estado" required>
+                                    <option value="">Selecione</option>
+                                    <option value="AC">AC</option>
+                                    <option value="AL">AL</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AM">AM</option>
+                                    <option value="BA">BA</option>
+                                    <option value="CE">CE</option>
+                                    <option value="DF">DF</option>
+                                    <option value="ES">ES</option>
+                                    <option value="GO">GO</option>
+                                    <option value="MA">MA</option>
+                                    <option value="MT">MT</option>
+                                    <option value="MS">MS</option>
+                                    <option value="MG">MG</option>
+                                    <option value="PA">PA</option>
+                                    <option value="PB">PB</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PE">PE</option>
+                                    <option value="PI">PI</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="RN">RN</option>
+                                    <option value="RS">RS</option>
+                                    <option value="RO">RO</option>
+                                    <option value="RR">RR</option>
+                                    <option value="SC">SC</option>
+                                    <option value="SP">SP</option>
+                                    <option value="SE">SE</option>
+                                    <option value="TO">TO</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clienteCep">CEP *</label>
+                                <input type="text" id="clienteCep" name="cep" maxlength="9" placeholder="00000-000" required>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -529,49 +616,49 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async function() {
-    console.log(" Iniciando verificação de permissões para a página atual");
-    if (!window.auth.initialized) {
-        setTimeout(async () => {
+        console.log(" Iniciando verificação de permissões para a página atual");
+        if (!window.auth.initialized) {
+            setTimeout(async () => {
+                await initPageWithPermissions();
+            }, 500);
+        } else {
             await initPageWithPermissions();
-        }, 500);
-    } else {
-        await initPageWithPermissions();
-    }
-    async function initPageWithPermissions() {
-        const currentPage = window.location.pathname.split('/').pop();
-
-        console.log(" Verificando autenticação...");
-        if (!window.auth.isAuthenticated()) {
-            console.log(" Usuário não autenticado, redirecionando para login");
-            window.location.href = '/login.html';
-            return;
         }
-        try {
-            const userData = await window.auth.getCurrentUser();
-            console.log(" Dados do usuário:", userData);
-            console.log(" Tipo de usuário:", userData.tipo_usuario);
-            
-            const hasAccess = window.PermissionManager.hasPageAccess(userData.tipo_usuario, currentPage);
-            console.log(` Usuário tem acesso à página ${currentPage}:`, hasAccess);
-            
-            if (!hasAccess) {
-                console.log(` Acesso negado para ${currentPage}`);
-                alert('Acesso negado! Você não tem permissão para acessar esta página.');
-                window.location.href = 'index.html';
+        async function initPageWithPermissions() {
+            const currentPage = window.location.pathname.split('/').pop();
+
+            console.log(" Verificando autenticação...");
+            if (!window.auth.isAuthenticated()) {
+                console.log(" Usuário não autenticado, redirecionando para login");
+                window.location.href = '/login.html';
                 return;
             }
-            console.log(" Acesso permitido, carregando página");
-            updateUserInfo(userData);
-            
-            window.PermissionManager.buildMenu(userData.tipo_usuario || 'vendedor', currentPage);
-        } catch (error) {
-            console.error(' Erro ao buscar usuário:', error);
-            alert('Erro ao verificar permissões. Redirecionando para o login.');
-            window.location.href = '/login.html';
-            return;
+            try {
+                const userData = await window.auth.getCurrentUser();
+                console.log(" Dados do usuário:", userData);
+                console.log(" Tipo de usuário:", userData.tipo_usuario);
+                
+                const hasAccess = window.PermissionManager.hasPageAccess(userData.tipo_usuario, currentPage);
+                console.log(` Usuário tem acesso à página ${currentPage}:`, hasAccess);
+                
+                if (!hasAccess) {
+                    console.log(` Acesso negado para ${currentPage}`);
+                    alert('Acesso negado! Você não tem permissão para acessar esta página.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                console.log(" Acesso permitido, carregando página");
+                updateUserInfo(userData);
+                
+                window.PermissionManager.buildMenu(userData.tipo_usuario || 'vendedor', currentPage);
+            } catch (error) {
+                console.error(' Erro ao buscar usuário:', error);
+                alert('Erro ao verificar permissões. Redirecionando para o login.');
+                window.location.href = '/login.html';
+                return;
+            }
+            addLogoutButton();
         }
-        addLogoutButton();
-    }
         
         function updateUserInfo(user) {
             const userNameEl = document.querySelector('.user-name');

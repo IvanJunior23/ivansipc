@@ -176,6 +176,82 @@ class RelatorioModel {
       throw new Error(`Erro ao buscar vendas por período: ${error.message}`)
     }
   }
+
+  // Relatório de clientes
+  static async getRelatorioClientes(filtros = {}) {
+    let query = `
+      SELECT 
+        p.pessoa_id,
+        p.nome,
+        p.tipo_pessoa,
+        c.cliente_id,
+        c.status as ativo,
+        COUNT(DISTINCT v.venda_id) as total_compras,
+        COALESCE(SUM(v.valor_total), 0) as valor_total,
+        MAX(v.data_hora) as ultima_compra
+      FROM cliente c
+      JOIN pessoa p ON c.pessoa_id = p.pessoa_id
+      LEFT JOIN venda v ON c.cliente_id = v.cliente_id AND v.status = 'concluida'
+      WHERE 1=1
+    `
+
+    const params = []
+
+    if (filtros.ativo !== undefined) {
+      query += " AND c.status = ?"
+      params.push(filtros.ativo)
+    }
+
+    if (filtros.data_inicio && filtros.data_fim) {
+      query += " AND v.data_hora BETWEEN ? AND ?"
+      params.push(filtros.data_inicio, filtros.data_fim)
+    }
+
+    query += " GROUP BY p.pessoa_id, p.nome, p.tipo_pessoa, c.cliente_id, c.status"
+    query += " ORDER BY valor_total DESC"
+
+    try {
+      const [results] = await pool.execute(query, params)
+      return results
+    } catch (error) {
+      throw new Error(`Erro ao gerar relatório de clientes: ${error.message}`)
+    }
+  }
+
+  // Relatório financeiro
+  static async getRelatorioFinanceiro(filtros = {}) {
+    let query = `
+      SELECT 
+        DATE_FORMAT(v.data_hora, '%Y-%m') as periodo,
+        SUM(v.valor_total) as receita,
+        SUM(iv.quantidade * p.preco_custo) as custos,
+        SUM(v.valor_total) - SUM(iv.quantidade * p.preco_custo) as lucro_bruto,
+        ((SUM(v.valor_total) - SUM(iv.quantidade * p.preco_custo)) / SUM(v.valor_total) * 100) as margem
+      FROM venda v
+      JOIN item_venda iv ON v.venda_id = iv.venda_id
+      JOIN peca p ON iv.peca_id = p.peca_id
+      WHERE v.status = 'concluida'
+    `
+
+    const params = []
+
+    if (filtros.data_inicio && filtros.data_fim) {
+      query += " AND DATE(v.data_hora) BETWEEN ? AND ?"
+      params.push(filtros.data_inicio, filtros.data_fim)
+    } else {
+      query += " AND v.data_hora >= DATE_SUB(NOW(), INTERVAL 12 MONTH)"
+    }
+
+    query += " GROUP BY DATE_FORMAT(v.data_hora, '%Y-%m')"
+    query += " ORDER BY periodo DESC"
+
+    try {
+      const [results] = await pool.execute(query, params)
+      return results
+    } catch (error) {
+      throw new Error(`Erro ao gerar relatório financeiro: ${error.message}`)
+    }
+  }
 }
 
 module.exports = RelatorioModel

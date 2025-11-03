@@ -1,7 +1,6 @@
 class FornecedorManager {
   constructor() {
     this.fornecedores = []
-    this.pessoas = []
     this.currentEditingId = null
     this.init()
   }
@@ -9,7 +8,6 @@ class FornecedorManager {
   async init() {
     console.log(" 🔄 Inicializando gerenciador de fornecedores")
     await this.loadFornecedores()
-    await this.loadPessoas()
     this.setupEventListeners()
   }
 
@@ -30,11 +28,6 @@ class FornecedorManager {
         this.closeViewFornecedorModal()
       }
     })
-
-    const pessoaSelect = document.getElementById("pessoaSelect")
-    if (pessoaSelect) {
-      pessoaSelect.addEventListener("change", () => this.onPessoaSelected())
-    }
   }
 
   async makeAuthenticatedRequest(url, options = {}) {
@@ -91,7 +84,6 @@ class FornecedorManager {
       if (result.success) {
         this.fornecedores = result.data || []
         console.log(" ✅ Fornecedores carregados:", this.fornecedores.length)
-        console.log(" 📋 Dados dos fornecedores:", this.fornecedores)
         this.renderFornecedores(this.fornecedores)
       } else {
         throw new Error(result.error || "Erro desconhecido")
@@ -103,99 +95,6 @@ class FornecedorManager {
     } finally {
       this.showLoading(false)
     }
-  }
-
-  async loadPessoas() {
-    try {
-      console.log(" 🔄 Carregando pessoas da API...")
-
-      const response = await this.makeAuthenticatedRequest("/api/pessoas?incluir_inativos=true")
-      if (!response || !response.ok) {
-        throw new Error("Erro ao carregar pessoas")
-      }
-
-      const result = await response.json()
-      console.log(" 📦 Resposta da API de pessoas:", result)
-
-      if (result.success) {
-        this.pessoas = result.data || []
-        console.log(" ✅ Pessoas carregadas:", this.pessoas.length)
-        this.populatePessoaSelect()
-      } else {
-        throw new Error(result.error || "Erro desconhecido")
-      }
-    } catch (error) {
-      console.error(" ❌ Erro ao carregar pessoas:", error)
-      this.showToast("Erro ao carregar pessoas", "error")
-    }
-  }
-
-  populatePessoaSelect() {
-    const select = document.getElementById("pessoaSelect")
-    if (!select) return
-
-    select.innerHTML = '<option value="">-- Selecione uma pessoa ou preencha manualmente --</option>'
-
-    this.pessoas.forEach((pessoa) => {
-      const option = document.createElement("option")
-      option.value = pessoa.pessoa_id
-      option.textContent = `${pessoa.nome} (ID: ${pessoa.pessoa_id})`
-      select.appendChild(option)
-    })
-
-    console.log(" ✅ Seletor de pessoas populado com", this.pessoas.length, "opções")
-  }
-
-  async onPessoaSelected() {
-    const select = document.getElementById("pessoaSelect")
-    const selectedOption = select.options[select.selectedIndex]
-    const pessoaInfo = document.getElementById("pessoaInfo")
-
-    if (!selectedOption.value) {
-      pessoaInfo.style.display = "none"
-      return
-    }
-
-    try {
-      const pessoaId = selectedOption.value
-      console.log(" 👤 Carregando dados completos da pessoa ID:", pessoaId)
-
-      const response = await this.makeAuthenticatedRequest(`/api/pessoas/${pessoaId}`)
-      if (!response || !response.ok) {
-        throw new Error("Erro ao carregar dados da pessoa")
-      }
-
-      const result = await response.json()
-      console.log(" 📦 Dados completos da pessoa:", result)
-
-      if (result.success && result.data) {
-        const pessoa = result.data
-        console.log(" ✅ Mostrando dados da pessoa:", pessoa)
-
-        document.getElementById("pessoaNome").textContent = pessoa.nome || "-"
-
-        pessoaInfo.style.display = "block"
-        this.showToast("Pessoa selecionada com sucesso!", "success")
-      }
-    } catch (error) {
-      console.error(" ❌ Erro ao carregar dados da pessoa:", error)
-      this.showToast("Erro ao carregar dados da pessoa", "error")
-      pessoaInfo.style.display = "none"
-    }
-  }
-
-  clearFormFields() {
-    console.log(" 🧹 Limpando campos do formulário")
-    document.getElementById("fornecedorNome").value = ""
-    document.getElementById("fornecedorEmail").value = ""
-    document.getElementById("fornecedorTelefone").value = ""
-    document.getElementById("fornecedorLogradouro").value = ""
-    document.getElementById("fornecedorNumero").value = ""
-    document.getElementById("fornecedorComplemento").value = ""
-    document.getElementById("fornecedorBairro").value = ""
-    document.getElementById("fornecedorCidade").value = ""
-    document.getElementById("fornecedorEstado").value = ""
-    document.getElementById("fornecedorCep").value = ""
   }
 
   renderFornecedores(fornecedores) {
@@ -293,14 +192,6 @@ class FornecedorManager {
     document.getElementById("fornecedorModalTitle").textContent = "Novo Fornecedor"
     document.getElementById("fornecedorForm").reset()
     document.getElementById("fornecedorId").value = ""
-
-    const pessoaSelect = document.getElementById("pessoaSelect")
-    if (pessoaSelect) {
-      pessoaSelect.value = ""
-      pessoaSelect.disabled = false // Habilitar select para novo fornecedor
-    }
-
-    document.getElementById("pessoaInfo").style.display = "none"
     document.getElementById("fornecedorModal").style.display = "block"
   }
 
@@ -318,14 +209,18 @@ class FornecedorManager {
     document.getElementById("fornecedorModalTitle").textContent = "Editar Fornecedor"
     document.getElementById("fornecedorId").value = id
 
+    // Preencher todos os campos
+    document.getElementById("fornecedorNome").value = fornecedor.nome || ""
     document.getElementById("fornecedorCnpj").value = fornecedor.cnpj || ""
-
-    const pessoaSelect = document.getElementById("pessoaSelect")
-    if (pessoaSelect && fornecedor.pessoa_id) {
-      pessoaSelect.value = fornecedor.pessoa_id
-      pessoaSelect.disabled = true
-      await this.onPessoaSelected()
-    }
+    document.getElementById("fornecedorTelefone").value = fornecedor.telefone || ""
+    document.getElementById("fornecedorEmail").value = fornecedor.email || ""
+    document.getElementById("fornecedorLogradouro").value = fornecedor.logradouro || ""
+    document.getElementById("fornecedorNumero").value = fornecedor.numero || ""
+    document.getElementById("fornecedorComplemento").value = fornecedor.complemento || ""
+    document.getElementById("fornecedorBairro").value = fornecedor.bairro || ""
+    document.getElementById("fornecedorCidade").value = fornecedor.cidade || ""
+    document.getElementById("fornecedorEstado").value = fornecedor.estado || ""
+    document.getElementById("fornecedorCep").value = fornecedor.cep || ""
 
     document.getElementById("fornecedorModal").style.display = "block"
   }
@@ -334,11 +229,6 @@ class FornecedorManager {
     console.log(" 📝 Fechando modal de fornecedor")
     document.getElementById("fornecedorModal").style.display = "none"
     document.getElementById("fornecedorForm").reset()
-    document.getElementById("pessoaInfo").style.display = "none"
-
-    const pessoaSelect = document.getElementById("pessoaSelect")
-    if (pessoaSelect) pessoaSelect.disabled = false
-
     this.currentEditingId = null
   }
 
@@ -351,31 +241,51 @@ class FornecedorManager {
     console.log(" 📝 handleFormSubmit chamada")
     event.preventDefault()
 
+    const submitBtn = event.target.querySelector('button[type="submit"]')
+    if (submitBtn.disabled) {
+      console.log(" ⚠️ Formulário já está sendo enviado, ignorando submit duplicado")
+      return false
+    }
+
     const formData = new FormData(event.target)
-    const userData = await window.auth.getCurrentUser()
 
     const fornecedorData = {
-      pessoa_id: Number.parseInt(formData.get("pessoa_id")),
+      nome: formData.get("nome")?.trim(),
       cnpj: formData.get("cnpj")?.trim(),
+      telefone: formData.get("telefone")?.trim(),
+      email: formData.get("email")?.trim(),
+      endereco: {
+        logradouro: formData.get("logradouro")?.trim(),
+        numero: formData.get("numero")?.trim(),
+        complemento: formData.get("complemento")?.trim() || null,
+        bairro: formData.get("bairro")?.trim(),
+        cidade: formData.get("cidade")?.trim(),
+        estado: formData.get("estado"),
+        cep: formData.get("cep")?.trim(),
+      },
     }
 
-    if (this.currentEditingId) {
-      fornecedorData.updated_by = userData.usuario_id
-    } else {
-      fornecedorData.created_by = userData.usuario_id
-    }
+    console.log(" 🏠 Dados do endereço estruturados:", fornecedorData.endereco)
 
-    if (!fornecedorData.pessoa_id || isNaN(fornecedorData.pessoa_id)) {
-      this.showToast("Por favor, selecione uma pessoa válida", "error")
+    // Validações básicas
+    if (!fornecedorData.nome || !fornecedorData.cnpj || !fornecedorData.telefone || !fornecedorData.email) {
+      this.showToast("Por favor, preencha todos os campos obrigatórios de dados da empresa e contato", "error")
       return false
     }
 
-    if (!fornecedorData.cnpj) {
-      this.showToast("Por favor, informe o CNPJ", "error")
+    if (
+      !fornecedorData.endereco.logradouro ||
+      !fornecedorData.endereco.numero ||
+      !fornecedorData.endereco.bairro ||
+      !fornecedorData.endereco.cidade ||
+      !fornecedorData.endereco.estado ||
+      !fornecedorData.endereco.cep
+    ) {
+      this.showToast("Por favor, preencha todos os campos obrigatórios de endereço", "error")
       return false
     }
 
-    console.log(" 📝 Dados processados:", fornecedorData)
+    console.log(" 📝 Dados completos sendo enviados:", fornecedorData)
 
     try {
       this.setFormLoading(true)
@@ -467,59 +377,7 @@ class FornecedorManager {
 
   showToast(message, type = "info") {
     console.log(` ${type.toUpperCase()}: ${message}`)
-
-    const toast = document.createElement("div")
-    toast.className = `toast toast-${type}`
-
-    const icon = type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle"
-
-    toast.innerHTML = `
-      <i class="fas ${icon}"></i>
-      <span>${message}</span>
-    `
-
-    toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === "success" ? "#28a745" : type === "error" ? "#dc3545" : "#17a2b8"};
-      color: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      z-index: 9999;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 500;
-      animation: slideInRight 0.3s ease-out;
-      max-width: 400px;
-    `
-
-    const style = document.createElement("style")
-    style.textContent = `
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-    `
-    document.head.appendChild(style)
-
-    document.body.appendChild(toast)
-
-    setTimeout(() => {
-      toast.style.animation = "slideInRight 0.3s ease-out reverse"
-      setTimeout(() => {
-        toast.remove()
-        style.remove()
-      }, 300)
-    }, 3000)
+    alert(message)
   }
 }
 

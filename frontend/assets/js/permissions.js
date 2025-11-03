@@ -11,14 +11,14 @@ const PERMISSIONS = {
       { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
       { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
       { name: "Trocas", icon: "fas fa-exchange-alt", url: "trocas.html" },
-      { name: "Alertas", icon: "fas fa-bell", url: "alertas.html" },
+      { name: "Alertas", icon: "fas fa-bell", url: "alertas-new.html" },
       { name: "Relatórios", icon: "fas fa-chart-bar", url: "relatorios.html" },
       { name: "Logs", icon: "fas fa-file-alt", url: "logs.html" },
       { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
       { name: "Usuários", icon: "fas fa-user-cog", url: "usuarios.html" },
-      { name: 'Pessoas', icon: 'fas fa-user-friends', url: 'pessoas.html', active: true },
+    /*{ name: 'Pessoas', icon: 'fas fa-user-friends', url: 'pessoas.html', active: true },
       { name: "Contatos", icon: "fas fa-address-book", url: "contatos.html" },
-      { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" },
+      { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" },*/
       { name: "Imagens", icon: "fas fa-map-marker-alt", url: "imagens.html" },
     ],
     quickActions: [
@@ -27,7 +27,7 @@ const PERMISSIONS = {
       { name: "Cadastrar Cliente", icon: "fas fa-user-plus", url: "clientes.html" },
       { name: "Nova Compra", icon: "fas fa-shopping-bag", url: "compras.html" },
       { name: "Gerenciar Usuários", icon: "fas fa-users-cog", url: "usuarios.html" },
-      { name: "Ver Alertas", icon: "fas fa-bell", url: "alertas.html" },
+      { name: "Ver Alertas", icon: "fas fa-bell", url: "alertas-new.html" },
     ],
   },
   vendedor: {
@@ -38,9 +38,9 @@ const PERMISSIONS = {
       { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
       { name: "Trocas", icon: "fas fa-exchange-alt", url: "trocas.html" },
       { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-      { name: 'Pessoas', icon: 'fas fa-user-friends', url: 'pessoas.html', active: true },
+    /*{ name: 'Pessoas', icon: 'fas fa-user-friends', url: 'pessoas.html', active: true },
       { name: "Contatos", icon: "fas fa-address-book", url: "contatos.html" },
-      { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" },
+      { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" }, */
     ],
     quickActions: [
       { name: "Nova Venda", icon: "fas fa-shopping-cart", url: "vendas.html" },
@@ -57,14 +57,14 @@ const PERMISSIONS = {
       { name: "Peças", icon: "fas fa-microchip", url: "pecas.html" },
       { name: "Fornecedores", icon: "fas fa-truck", url: "fornecedores.html" },
       { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
-      { name: "Alertas", icon: "fas fa-bell", url: "alertas.html" },
+      { name: "Alertas", icon: "fas fa-bell", url: "alertas-new.html" },
       { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
     ],
     quickActions: [
       { name: "Cadastrar Peça", icon: "fas fa-microchip", url: "pecas.html" },
       { name: "Nova Compra", icon: "fas fa-shopping-bag", url: "compras.html" },
       { name: "Cadastrar Fornecedor", icon: "fas fa-truck", url: "fornecedores.html" },
-      { name: "Ver Alertas", icon: "fas fa-bell", url: "alertas.html" },
+      { name: "Ver Alertas", icon: "fas fa-bell", url: "alertas-new.html" },
     ],
   },
 }

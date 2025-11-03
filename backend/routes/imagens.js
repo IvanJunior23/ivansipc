@@ -12,6 +12,7 @@ router.use(authenticateToken)
 // Rotas CRUD
 router.get("/", imagemController.list)
 router.get("/:id", imagemController.getById)
+router.post("/", imagemController.uploadMultiple)
 router.post("/upload", imagemController.uploadMultiple)
 router.put("/:id", imagemController.update)
 

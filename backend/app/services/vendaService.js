@@ -8,6 +8,10 @@ class VendaService {
   static async criarVenda(dadosVenda, itens) {
     const { cliente_id, usuario_id, forma_pagamento_id, desconto_aplicado } = dadosVenda
 
+    console.log(" === CRIANDO VENDA ===")
+    console.log(" Dados da venda:", dadosVenda)
+    console.log(" Itens:", itens)
+
     // Validar cliente
     const cliente = await ClienteModel.buscarPorId(cliente_id)
     if (!cliente || !cliente.status) {
@@ -32,6 +36,8 @@ class VendaService {
       if (!peca || !peca.status) {
         throw new Error(`Peça com ID ${item.peca_id} não encontrada ou inativa`)
       }
+
+      console.log(` Peça ${peca.nome} - Estoque ANTES: ${peca.quantidade_estoque}`)
 
       // Verificar estoque disponível
       if (peca.quantidade_estoque < item.quantidade) {
@@ -68,6 +74,9 @@ class VendaService {
       desconto_aplicado: desconto_aplicado || 0,
       status: "pendente",
     })
+
+    console.log(` Venda criada com ID: ${vendaId} e status: pendente`)
+    console.log(" ESTOQUE NÃO FOI ALTERADO - venda está pendente")
 
     // Criar itens da venda
     for (const item of itens) {
@@ -214,27 +223,107 @@ class VendaService {
     return { message: "Venda concluída com sucesso" }
   }
 
+  static async finalizarVenda(id) {
+    const venda = await VendaModel.buscarPorId(id)
+    if (!venda) {
+      throw new Error("Venda não encontrada")
+    }
+
+    console.log(` === FINALIZANDO VENDA ${id} ===`)
+    console.log(` Status atual: ${venda.status}`)
+
+    if (venda.status === "concluida") {
+      throw new Error("Venda já foi finalizada")
+    }
+
+    if (venda.status === "cancelada") {
+      throw new Error("Não é possível finalizar venda cancelada")
+    }
+
+    // Get sale items
+    const itens = await ItemVendaModel.buscarPorVendaId(id)
+
+    console.log(` Itens da venda: ${itens.length}`)
+
+    // Reduce stock for each item
+    for (const item of itens) {
+      const peca = await PecaModel.buscarPorId(item.peca_id)
+      if (!peca) {
+        throw new Error(`Peça com ID ${item.peca_id} não encontrada`)
+      }
+
+      console.log(` Peça ${peca.nome}:`)
+      console.log(`   - Estoque ANTES: ${peca.quantidade_estoque}`)
+      console.log(`   - Quantidade vendida: ${item.quantidade}`)
+
+      // Check if there's enough stock
+      if (peca.quantidade_estoque < item.quantidade) {
+        throw new Error(
+          `Estoque insuficiente para a peça ${peca.nome}. Disponível: ${peca.quantidade_estoque}, Necessário: ${item.quantidade}`,
+        )
+      }
+
+      // Reduce stock
+      const novaQuantidade = peca.quantidade_estoque - item.quantidade
+      await PecaModel.atualizar(item.peca_id, {
+        ...peca,
+        quantidade_estoque: novaQuantidade,
+      })
+
+      console.log(`   - Estoque DEPOIS: ${novaQuantidade}`)
+      console.log(`   - ESTOQUE BAIXADO COM SUCESSO`)
+    }
+
+    // Update status to finalized
+    const sucesso = await VendaModel.atualizarStatus(id, "concluida")
+    if (!sucesso) {
+      throw new Error("Erro ao finalizar venda")
+    }
+
+    console.log(` Venda ${id} finalizada com sucesso`)
+    console.log(" === FIM DA FINALIZAÇÃO ===")
+
+    return { message: "Venda finalizada com sucesso e estoque atualizado" }
+  }
+
   static async cancelarVenda(id) {
     const venda = await VendaModel.buscarPorId(id)
     if (!venda) {
       throw new Error("Venda não encontrada")
     }
 
-    if (venda.status === "concluida") {
-      throw new Error("Não é possível cancelar venda já concluída")
-    }
-
     if (venda.status === "cancelada") {
       throw new Error("Venda já foi cancelada")
     }
 
-    // Atualizar status para cancelada
+    if (venda.status === "concluida") {
+      const itens = await ItemVendaModel.buscarPorVendaId(id)
+
+      for (const item of itens) {
+        const peca = await PecaModel.buscarPorId(item.peca_id)
+        if (peca) {
+          // Return stock
+          const novaQuantidade = peca.quantidade_estoque + item.quantidade
+          await PecaModel.atualizar(item.peca_id, {
+            ...peca,
+            quantidade_estoque: novaQuantidade,
+          })
+        }
+      }
+    }
+
+    // Update status to canceled
     const sucesso = await VendaModel.atualizarStatus(id, "cancelada")
     if (!sucesso) {
       throw new Error("Erro ao cancelar venda")
     }
 
-    return { message: "Venda cancelada com sucesso" }
+    return {
+      message:
+        venda.status === "concluida"
+          ? "Venda cancelada com sucesso e estoque revertido"
+          : "Venda cancelada com sucesso",
+    }
   }
 
   static async buscarItensVenda(vendaId) {

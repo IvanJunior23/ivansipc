@@ -59,9 +59,69 @@ class TrocaService {
       peca_substituta_id: peca_substituta_id || null,
       quantidade,
       motivo_troca,
+      status: "pendente",
     })
 
     return await TrocaModel.buscarPorId(trocaId)
+  }
+
+  static async aprovarTroca(id) {
+    const troca = await TrocaModel.buscarPorId(id)
+    if (!troca) {
+      throw new Error("Troca não encontrada")
+    }
+
+    if (troca.status !== "pendente") {
+      throw new Error("Apenas trocas pendentes podem ser aprovadas")
+    }
+
+    // Return the exchanged part to stock
+    const pecaTrocada = await PecaModel.buscarPorId(troca.peca_trocada_id)
+    if (pecaTrocada) {
+      const novaQuantidadeTrocada = pecaTrocada.quantidade_estoque + troca.quantidade
+      await PecaModel.atualizar(troca.peca_trocada_id, {
+        ...pecaTrocada,
+        quantidade_estoque: novaQuantidadeTrocada,
+      })
+    }
+
+    // If there's a substitute part, reduce its stock
+    if (troca.peca_substituta_id) {
+      const pecaSubstituta = await PecaModel.buscarPorId(troca.peca_substituta_id)
+      if (pecaSubstituta) {
+        if (pecaSubstituta.quantidade_estoque < troca.quantidade) {
+          throw new Error(
+            `Estoque insuficiente para a peça substituta. Disponível: ${pecaSubstituta.quantidade_estoque}`,
+          )
+        }
+
+        const novaQuantidadeSubstituta = pecaSubstituta.quantidade_estoque - troca.quantidade
+        await PecaModel.atualizar(troca.peca_substituta_id, {
+          ...pecaSubstituta,
+          quantidade_estoque: novaQuantidadeSubstituta,
+        })
+      }
+    }
+
+    // Update exchange status
+    await TrocaModel.atualizarStatus(id, "aprovada")
+
+    return { message: "Troca aprovada com sucesso e estoque atualizado" }
+  }
+
+  static async rejeitarTroca(id, motivo) {
+    const troca = await TrocaModel.buscarPorId(id)
+    if (!troca) {
+      throw new Error("Troca não encontrada")
+    }
+
+    if (troca.status !== "pendente") {
+      throw new Error("Apenas trocas pendentes podem ser rejeitadas")
+    }
+
+    await TrocaModel.atualizarStatus(id, "rejeitada", motivo)
+
+    return { message: "Troca rejeitada com sucesso" }
   }
 
   static async buscarTrocaPorId(id) {

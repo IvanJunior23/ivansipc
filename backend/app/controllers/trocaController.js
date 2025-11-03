@@ -67,6 +67,39 @@ class TrocaController {
       })
     }
   }
+
+  static async aprovar(req, res) {
+    try {
+      const troca = await TrocaService.aprovarTroca(req.params.id, req.user.id)
+      res.json({
+        success: true,
+        message: "Troca aprovada com sucesso",
+        data: troca,
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+      })
+    }
+  }
+
+  static async rejeitar(req, res) {
+    try {
+      const { motivo } = req.body
+      const troca = await TrocaService.rejeitarTroca(req.params.id, req.user.id, motivo)
+      res.json({
+        success: true,
+        message: "Troca rejeitada com sucesso",
+        data: troca,
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+      })
+    }
+  }
 }
 
 module.exports = TrocaController

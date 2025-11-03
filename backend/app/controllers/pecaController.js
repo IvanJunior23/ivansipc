@@ -2,9 +2,12 @@ const pecaService = require("../services/pecaService")
 
 const list = async (req, res, next) => {
   try {
-    const pecas = await pecaService.getAllPecas()
+    const incluirInativos = req.query.incluirInativos === "true"
+    const pecas = incluirInativos ? await pecaService.listarPecas(true) : await pecaService.getAllPecas()
+
     res.json({ success: true, data: pecas })
   } catch (error) {
+    console.error("Erro ao listar peças:", error)
     res.status(500).json({
       success: false,
       message: "Ocorreu um erro interno no servidor.",
@@ -201,6 +204,34 @@ const removerImagem = async (req, res, next) => {
   }
 }
 
+const gerarCodigo = async (req, res, next) => {
+  try {
+    const { categoria_id, marca_id } = req.query
+    const codigo = await pecaService.gerarCodigoAutomatico(categoria_id, marca_id)
+    res.json({ success: true, data: { codigo } })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || "Erro ao gerar código",
+    })
+  }
+}
+
+const getByFornecedor = async (req, res, next) => {
+  try {
+    const { fornecedorId } = req.params
+    const pecas = await pecaService.buscarPecasPorFornecedor(fornecedorId)
+    res.json({ success: true, data: pecas })
+  } catch (error) {
+    console.error("Erro ao buscar peças por fornecedor:", error)
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar peças por fornecedor",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
   list,
   getById,
@@ -211,4 +242,6 @@ module.exports = {
   vincularImagem,
   buscarImagens,
   removerImagem,
+  gerarCodigo,
+  getByFornecedor, // Export new method
 }

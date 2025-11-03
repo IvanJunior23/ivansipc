@@ -240,6 +240,7 @@ function showAddFormaPagamentoModal() {
   document.getElementById("formaPagamentoForm").reset()
   document.getElementById("formaPagamentoId").value = ""
   document.getElementById("formaPagamentoStatus").value = "ativo"
+  clearValidationError("formaPagamentoNome")
   document.getElementById("formaPagamentoModal").style.display = "block"
 }
 
@@ -257,7 +258,80 @@ function editFormaPagamento(id) {
   const isActive = forma.status === "ativo" || forma.status === true || forma.status === 1
   document.getElementById("formaPagamentoStatus").value = isActive ? "ativo" : "inativo"
 
+  clearValidationError("formaPagamentoNome")
   document.getElementById("formaPagamentoModal").style.display = "block"
+}
+
+function validateNomeDuplicado() {
+  const nomeInput = document.getElementById("formaPagamentoNome")
+  const nome = nomeInput.value.trim().toLowerCase()
+
+  console.log(" Validating nome:", nome)
+  console.log(" Editing ID:", editingFormaPagamentoId)
+  console.log(" All formas:", formasPagamento)
+
+  if (!nome) {
+    clearValidationError("formaPagamentoNome")
+    return true
+  }
+
+  // Check if name already exists (excluding current record when editing)
+  const isDuplicate = formasPagamento.some((forma) => {
+    const isSameName = forma.nome.toLowerCase() === nome
+    const isDifferentRecord = editingFormaPagamentoId ? forma.forma_pagamento_id !== editingFormaPagamentoId : true
+    console.log(" Checking forma:", forma.nome, "isSameName:", isSameName, "isDifferentRecord:", isDifferentRecord)
+    return isSameName && isDifferentRecord
+  })
+
+  console.log(" Is duplicate:", isDuplicate)
+
+  if (isDuplicate) {
+    showValidationError("formaPagamentoNome", "Já existe uma forma de pagamento com este nome")
+    return false
+  } else {
+    clearValidationError("formaPagamentoNome")
+    return true
+  }
+}
+
+function showValidationError(inputId, message) {
+  const input = document.getElementById(inputId)
+  const formGroup = input.closest(".form-group")
+
+  // Remove any existing error message
+  const existingError = formGroup.querySelector(".error-message")
+  if (existingError) {
+    existingError.remove()
+  }
+
+  // Add error styling
+  input.style.borderColor = "#e74c3c"
+  input.style.backgroundColor = "#fff5f5"
+
+  // Add error message
+  const errorDiv = document.createElement("div")
+  errorDiv.className = "error-message"
+  errorDiv.style.cssText =
+    "color: #e74c3c; font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 5px;"
+  errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`
+
+  // Insert after the input
+  input.parentNode.insertBefore(errorDiv, input.nextSibling)
+}
+
+function clearValidationError(inputId) {
+  const input = document.getElementById(inputId)
+  const formGroup = input.closest(".form-group")
+
+  // Remove error styling
+  input.style.borderColor = ""
+  input.style.backgroundColor = ""
+
+  // Remove error message
+  const existingError = formGroup.querySelector(".error-message")
+  if (existingError) {
+    existingError.remove()
+  }
 }
 
 // Save payment method form
@@ -265,6 +339,15 @@ async function saveFormaPagamentoForm(event) {
   event.preventDefault()
 
   console.log(" Form submission started")
+  console.log(" Event:", event)
+
+  if (!validateNomeDuplicado()) {
+    console.log(" Validation failed - duplicate name detected")
+    showToast("Já existe uma forma de pagamento com este nome", "error")
+    return
+  }
+
+  console.log(" Validation passed")
 
   const formData = new FormData(event.target)
   const formaPagamentoData = {}
@@ -316,7 +399,8 @@ async function saveFormaPagamentoForm(event) {
         window.location.href = "/login.html"
         return
       }
-      throw new Error(result.message || "Erro ao salvar forma de pagamento")
+      const errorMessage = result.message || result.error || "Erro ao salvar forma de pagamento"
+      throw new Error(errorMessage)
     }
 
     showToast(
@@ -327,7 +411,7 @@ async function saveFormaPagamentoForm(event) {
     loadFormasPagamento()
   } catch (error) {
     console.error(" Error saving payment method:", error)
-    showToast("Erro ao salvar forma de pagamento: " + error.message, "error")
+    showToast(error.message, "error")
   } finally {
     hideLoading()
   }

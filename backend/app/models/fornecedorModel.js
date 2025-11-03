@@ -71,7 +71,7 @@ class FornecedorModel {
              p.status as pessoa_status,
              c.telefone,
              c.email,
-             e.logradouro as endereco,
+             e.logradouro,
              e.numero,
              e.complemento,
              e.bairro,

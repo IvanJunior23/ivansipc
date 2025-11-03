@@ -2,6 +2,7 @@ const CompraModel = require("../models/compraModel")
 const ItemCompraModel = require("../models/itemCompraModel")
 const FornecedorModel = require("../models/fornecedorModel")
 const PecaModel = require("../models/pecaModel")
+const HistoricoPrecoModel = require("../models/historicoPrecoModel") // Added import
 
 class CompraService {
   static async criarCompra(dadosCompra, itens) {
@@ -160,6 +161,26 @@ class CompraService {
 
     if (compra.status === "cancelada") {
       throw new Error("Não é possível receber compra cancelada")
+    }
+
+    const itens = await ItemCompraModel.buscarPorCompraId(id)
+
+    for (const item of itens) {
+      await HistoricoPrecoModel.criar({
+        peca_id: item.peca_id,
+        fornecedor_id: compra.fornecedor_id,
+        compra_id: id,
+        preco_compra: item.valor_unitario,
+      })
+
+      // Get current part data first
+      const pecaAtual = await PecaModel.buscarPorId(item.peca_id)
+      if (pecaAtual) {
+        await PecaModel.atualizar(item.peca_id, {
+          ...pecaAtual,
+          preco_custo: item.valor_unitario,
+        })
+      }
     }
 
     // Atualizar status para recebida

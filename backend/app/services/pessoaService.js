@@ -20,37 +20,70 @@ class PessoaService {
         console.log("📞 Usando contato existente ID:", dadosPessoa.contato_id)
         contatoId = dadosPessoa.contato_id
       } else if (dadosPessoa.contato && Object.keys(dadosPessoa.contato).length > 0) {
-        console.log("📞 Criando contato:", dadosPessoa.contato)
+        const temDadosContato = dadosPessoa.contato.telefone || dadosPessoa.contato.email
 
-        if (ContatoModel.create) {
-          const resultado = await ContatoModel.create({
-            ...dadosPessoa.contato,
-            created_by: userId,
+        if (temDadosContato) {
+          console.log("📞 Criando contato:", dadosPessoa.contato)
+
+          const contatoCriado = await ContatoModel.create({
+            nome_completo: dadosPessoa.contato.nome_completo || dadosPessoa.nome,
+            telefone: dadosPessoa.contato.telefone || null,
+            email: dadosPessoa.contato.email || null,
+            usuario_id: userId,
           })
-          contatoId = resultado.id
-        }
 
-        console.log("📞 Contato criado com ID:", contatoId)
+          contatoId = contatoCriado.contato_id
+          console.log("📞 Contato criado com ID:", contatoId)
+        } else {
+          console.log("📞 Nenhum dado de contato fornecido, pulando criação")
+        }
       }
 
       if (dadosPessoa.endereco_id) {
         console.log("🏠 Usando endereço existente ID:", dadosPessoa.endereco_id)
         enderecoId = dadosPessoa.endereco_id
       } else if (dadosPessoa.endereco && Object.keys(dadosPessoa.endereco).length > 0) {
-        console.log("🏠 Criando endereço:", dadosPessoa.endereco)
+        const temDadosEndereco =
+          (dadosPessoa.endereco.logradouro && dadosPessoa.endereco.logradouro.trim()) ||
+          (dadosPessoa.endereco.cidade && dadosPessoa.endereco.cidade.trim()) ||
+          (dadosPessoa.endereco.cep && dadosPessoa.endereco.cep.trim())
 
-        if (EnderecoModel.create) {
-          const resultado = await EnderecoModel.create({
-            ...dadosPessoa.endereco,
-            created_by: userId,
-          })
-          enderecoId = resultado.id
+        if (temDadosEndereco) {
+          console.log("🏠 Criando endereço com dados:", JSON.stringify(dadosPessoa.endereco, null, 2))
+
+          try {
+            const enderecoData = {
+              logradouro: dadosPessoa.endereco.logradouro?.trim() || null,
+              numero: dadosPessoa.endereco.numero?.trim() || null,
+              complemento: dadosPessoa.endereco.complemento?.trim() || null,
+              bairro: dadosPessoa.endereco.bairro?.trim() || null,
+              cidade: dadosPessoa.endereco.cidade?.trim() || null,
+              estado: dadosPessoa.endereco.estado || null,
+              cep: dadosPessoa.endereco.cep?.trim() || null,
+              created_by: userId,
+            }
+
+            console.log("🏠 Dados formatados para EnderecoModel.create:", JSON.stringify(enderecoData, null, 2))
+
+            const enderecoCriado = await EnderecoModel.create(enderecoData)
+
+            enderecoId = enderecoCriado.id
+            console.log("🏠 Endereço criado com sucesso! ID:", enderecoId)
+            console.log("🏠 Objeto retornado:", JSON.stringify(enderecoCriado, null, 2))
+
+            if (!enderecoId) {
+              throw new Error("EnderecoModel.create não retornou um ID válido")
+            }
+          } catch (enderecoError) {
+            console.error("❌ Erro ao criar endereço:", enderecoError)
+            console.error("❌ Stack trace:", enderecoError.stack)
+            throw new Error(`Falha ao criar endereço: ${enderecoError.message}`)
+          }
+        } else {
+          console.log("🏠 Nenhum dado essencial de endereço fornecido, pulando criação")
         }
-
-        console.log("🏠 Endereço criado com ID:", enderecoId)
       }
 
-      // Criar pessoa com os IDs dos relacionamentos
       const pessoaData = {
         nome: dadosPessoa.pessoa?.nome || dadosPessoa.nome,
         contato_id: contatoId,
@@ -63,12 +96,13 @@ class PessoaService {
               : true,
       }
 
-      console.log("👤 Criando pessoa:", pessoaData)
+      console.log("👤 Criando pessoa com dados:", JSON.stringify(pessoaData, null, 2))
       const pessoaId = await PessoaModel.criar(pessoaData)
       console.log("👤 Pessoa criada com ID:", pessoaId)
 
       await connection.commit()
       console.log("✅ Transação commitada com sucesso")
+      console.log("✅ Resumo: Pessoa ID:", pessoaId, "| Contato ID:", contatoId, "| Endereço ID:", enderecoId)
 
       return pessoaId
     } catch (error) {
@@ -89,7 +123,6 @@ class PessoaService {
       console.log("🔧 Iniciando transação para atualizar pessoa completa ID:", pessoaId)
       await connection.beginTransaction()
 
-      // Buscar pessoa atual com todos os dados
       const pessoaAtual = await PessoaModel.buscarPorId(pessoaId)
       if (!pessoaAtual) {
         throw new Error("Pessoa não encontrada")
@@ -104,22 +137,29 @@ class PessoaService {
         console.log("📞 Usando contato ID:", dadosPessoa.contato_id)
         contatoId = dadosPessoa.contato_id
       } else if (dadosPessoa.contato && Object.keys(dadosPessoa.contato).length > 0) {
-        console.log("📞 Processando contato:", dadosPessoa.contato)
+        const temDadosContato = dadosPessoa.contato.telefone || dadosPessoa.contato.email
 
-        if (contatoId && ContatoModel.update) {
-          console.log("📞 Atualizando contato existente ID:", contatoId)
-          await ContatoModel.update(contatoId, {
-            ...dadosPessoa.contato,
-            updated_by: userId,
-          })
-        } else if (ContatoModel.create) {
-          console.log("📞 Criando novo contato")
-          const resultado = await ContatoModel.create({
-            ...dadosPessoa.contato,
-            created_by: userId,
-          })
-          contatoId = resultado.id
-          console.log("📞 Novo contato criado com ID:", contatoId)
+        if (temDadosContato) {
+          console.log("📞 Processando contato:", dadosPessoa.contato)
+
+          if (contatoId) {
+            console.log("📞 Atualizando contato existente ID:", contatoId)
+            await ContatoModel.update(contatoId, {
+              nome_completo: dadosPessoa.contato.nome_completo || dadosPessoa.nome,
+              telefone: dadosPessoa.contato.telefone || null,
+              email: dadosPessoa.contato.email || null,
+            })
+          } else {
+            console.log("📞 Criando novo contato")
+            const contatoCriado = await ContatoModel.create({
+              nome_completo: dadosPessoa.contato.nome_completo || dadosPessoa.nome,
+              telefone: dadosPessoa.contato.telefone || null,
+              email: dadosPessoa.contato.email || null,
+              usuario_id: userId,
+            })
+            contatoId = contatoCriado.contato_id
+            console.log("📞 Novo contato criado com ID:", contatoId)
+          }
         }
       }
 
@@ -127,26 +167,50 @@ class PessoaService {
         console.log("🏠 Usando endereço ID:", dadosPessoa.endereco_id)
         enderecoId = dadosPessoa.endereco_id
       } else if (dadosPessoa.endereco && Object.keys(dadosPessoa.endereco).length > 0) {
-        console.log("🏠 Processando endereço:", dadosPessoa.endereco)
+        const temDadosEndereco =
+          (dadosPessoa.endereco.logradouro && dadosPessoa.endereco.logradouro.trim()) ||
+          (dadosPessoa.endereco.cidade && dadosPessoa.endereco.cidade.trim()) ||
+          (dadosPessoa.endereco.cep && dadosPessoa.endereco.cep.trim())
 
-        if (enderecoId && EnderecoModel.update) {
-          console.log("🏠 Atualizando endereço existente ID:", enderecoId)
-          await EnderecoModel.update(enderecoId, {
-            ...dadosPessoa.endereco,
-            updated_by: userId,
-          })
-        } else if (EnderecoModel.create) {
-          console.log("🏠 Criando novo endereço")
-          const resultado = await EnderecoModel.create({
-            ...dadosPessoa.endereco,
-            created_by: userId,
-          })
-          enderecoId = resultado.id
-          console.log("🏠 Novo endereço criado com ID:", enderecoId)
+        if (temDadosEndereco) {
+          console.log("🏠 Processando endereço:", JSON.stringify(dadosPessoa.endereco, null, 2))
+
+          try {
+            if (enderecoId) {
+              console.log("🏠 Atualizando endereço existente ID:", enderecoId)
+              await EnderecoModel.update(enderecoId, {
+                logradouro: dadosPessoa.endereco.logradouro?.trim() || null,
+                numero: dadosPessoa.endereco.numero?.trim() || null,
+                complemento: dadosPessoa.endereco.complemento?.trim() || null,
+                bairro: dadosPessoa.endereco.bairro?.trim() || null,
+                cidade: dadosPessoa.endereco.cidade?.trim() || null,
+                estado: dadosPessoa.endereco.estado || null,
+                cep: dadosPessoa.endereco.cep?.trim() || null,
+                updated_by: userId,
+              })
+            } else {
+              console.log("🏠 Criando novo endereço")
+              const enderecoCriado = await EnderecoModel.create({
+                logradouro: dadosPessoa.endereco.logradouro?.trim() || null,
+                numero: dadosPessoa.endereco.numero?.trim() || null,
+                complemento: dadosPessoa.endereco.complemento?.trim() || null,
+                bairro: dadosPessoa.endereco.bairro?.trim() || null,
+                cidade: dadosPessoa.endereco.cidade?.trim() || null,
+                estado: dadosPessoa.endereco.estado || null,
+                cep: dadosPessoa.endereco.cep?.trim() || null,
+                created_by: userId,
+              })
+              enderecoId = enderecoCriado.id
+              console.log("🏠 Novo endereço criado com ID:", enderecoId)
+            }
+          } catch (enderecoError) {
+            console.error("❌ Erro ao processar endereço:", enderecoError)
+            console.error("❌ Stack trace:", enderecoError.stack)
+            throw new Error(`Falha ao processar endereço: ${enderecoError.message}`)
+          }
         }
       }
 
-      // Atualizar pessoa
       const pessoaData = {
         nome: dadosPessoa.pessoa?.nome || dadosPessoa.nome || pessoaAtual.nome,
         contato_id: contatoId,
@@ -190,7 +254,6 @@ class PessoaService {
 
       console.log("✅ Pessoa encontrada:", pessoa.nome)
 
-      // Estruturar os dados de forma organizada
       const pessoaCompleta = {
         pessoa_id: pessoa.pessoa_id,
         nome: pessoa.nome,

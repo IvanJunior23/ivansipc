@@ -414,6 +414,15 @@
             <button class="btn-primary" onclick="showAddUsuarioModal()">
                 <i class="fas fa-plus"></i> Novo Usuário
             </button>
+            <!-- Adicionando filtro de status -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label for="filterStatus" style="font-weight: bold; color: #2C3E50;">Status:</label>
+                <select id="filterStatus" onchange="filterUsuarios()" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                    <option value="todos">Todos</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                </select>
+            </div>
             <div class="search-box">
                 <input type="text" id="searchUsuario" placeholder="Buscar usuário..." onkeyup="searchUsuarios()">
                 <i class="fas fa-search"></i>
@@ -456,22 +465,20 @@
                     
                     <div class="form-group">
                         <label for="usuarioNome">Nome Completo *</label>
-                        <select id="usuarioNome" name="pessoa_id">
-                            <option value="pessoa_id">Selecione uma pessoa</option>
-                        </select>
-                        <small class="field-info">Selecione a pessoa que será associada a este usuário</small>
+                        <input type="text" id="usuarioNome" name="nome" maxlength="100" required>
+                        <small class="field-info">Nome completo do usuário</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="usuarioTelefone">Telefone</label>
+                        <input type="text" id="usuarioTelefone" name="telefone" maxlength="20">
+                        <small class="field-info">Telefone para contato</small>
                     </div>
 
                     <div class="form-group">
                         <label for="usuarioEmail">E-mail *</label>
                         <input type="email" id="usuarioEmail" name="email" maxlength="100" required>
-                        <small class="field-info">Máximo 100 caracteres</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="usuarioConfirmarEmail">Confirmar E-mail *</label>
-                        <input type="email" id="usuarioConfirmarEmail" name="confirmarEmail" maxlength="100" required>
-                        <small class="field-info">Digite o e-mail novamente para confirmação</small>
+                        <small class="field-info">E-mail para login e contato</small>
                     </div>
 
                     <div class="form-group">
@@ -496,18 +503,81 @@
                         <small class="field-info">Digite a senha novamente para confirmação</small>
                     </div>
 
+                    <h4 style="margin-top: 20px; margin-bottom: 15px; color: #2C3E50; border-bottom: 2px solid #1ABC9C; padding-bottom: 5px;">Endereço</h4>
+                    
                     <div class="form-group">
-                        <label for="usuarioStatus">Status *</label>
-                        <select id="usuarioStatus" name="status" required>
-                            <option value="">Selecione o status</option>
-                            <option value="ativo">Ativo</option>
-                            <option value="inativo">Inativo</option>
-                        </select>
+                        <label for="usuarioLogradouro">Logradouro</label>
+                        <input type="text" id="usuarioLogradouro" name="logradouro" maxlength="200">
+                        <small class="field-info">Rua, avenida, etc.</small>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label for="usuarioNumero">Número</label>
+                            <input type="text" id="usuarioNumero" name="numero" maxlength="10">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioComplemento">Complemento</label>
+                            <input type="text" id="usuarioComplemento" name="complemento" maxlength="50">
+                            <small class="field-info">Opcional</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="usuarioBairro">Bairro</label>
+                        <input type="text" id="usuarioBairro" name="bairro" maxlength="100">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label for="usuarioCidade">Cidade</label>
+                            <input type="text" id="usuarioCidade" name="cidade" maxlength="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="usuarioEstado">Estado</label>
+                            <select id="usuarioEstado" name="estado">
+                                <option value="">Selecione</option>
+                                <option value="AC">AC</option>
+                                <option value="AL">AL</option>
+                                <option value="AP">AP</option>
+                                <option value="AM">AM</option>
+                                <option value="BA">BA</option>
+                                <option value="CE">CE</option>
+                                <option value="DF">DF</option>
+                                <option value="ES">ES</option>
+                                <option value="GO">GO</option>
+                                <option value="MA">MA</option>
+                                <option value="MT">MT</option>
+                                <option value="MS">MS</option>
+                                <option value="MG">MG</option>
+                                <option value="PA">PA</option>
+                                <option value="PB">PB</option>
+                                <option value="PR">PR</option>
+                                <option value="PE">PE</option>
+                                <option value="PI">PI</option>
+                                <option value="RJ">RJ</option>
+                                <option value="RN">RN</option>
+                                <option value="RS">RS</option>
+                                <option value="RO">RO</option>
+                                <option value="RR">RR</option>
+                                <option value="SC">SC</option>
+                                <option value="SP">SP</option>
+                                <option value="SE">SE</option>
+                                <option value="TO">TO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="usuarioCep">CEP</label>
+                        <input type="text" id="usuarioCep" name="cep" maxlength="9" placeholder="00000-000">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="closeUsuarioModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar</button>
+                    <button type="submit" class="btn-primary" id="saveUsuarioBtn">Salvar</button>
                 </div>
             </form>
         </div>

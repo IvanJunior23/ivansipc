@@ -95,6 +95,56 @@ class RelatorioController {
       })
     }
   }
+
+  static async gerarRelatorioClientes(req, res) {
+    try {
+      const filtros = {
+        data_inicio: req.query.data_inicio,
+        data_fim: req.query.data_fim,
+        ativo: req.query.ativo,
+      }
+
+      const relatorio = await RelatorioService.gerarRelatorioClientes(filtros)
+
+      res.json({
+        success: true,
+        data: relatorio,
+        message: "Relatório de clientes gerado com sucesso",
+      })
+    } catch (error) {
+      console.error("Erro ao gerar relatório de clientes:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao gerar relatório de clientes",
+        details: error.message,
+      })
+    }
+  }
+
+  static async gerarRelatorioFinanceiro(req, res) {
+    try {
+      const filtros = {
+        data_inicio: req.query.data_inicio,
+        data_fim: req.query.data_fim,
+        periodo: req.query.periodo || "mes",
+      }
+
+      const relatorio = await RelatorioService.gerarRelatorioFinanceiro(filtros)
+
+      res.json({
+        success: true,
+        data: relatorio,
+        message: "Relatório financeiro gerado com sucesso",
+      })
+    } catch (error) {
+      console.error("Erro ao gerar relatório financeiro:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao gerar relatório financeiro",
+        details: error.message,
+      })
+    }
+  }
 }
 
 module.exports = RelatorioController

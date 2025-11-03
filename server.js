@@ -56,6 +56,7 @@ const LogsRoutes = require("./backend/routes/logs")
 const passwordResetRoutes = require("./backend/routes/passwordReset")
 const pessoasRoutes = require("./backend/routes/pessoas")
 const imagemRoutes = require("./backend/routes/imagens")
+const historicoPrecoRoutes = require("./backend/routes/historicoPrecos")
 
 app.use("/api/auth", authRoutes)
 app.use("/api/usuarios", usuarioRoutes)
@@ -81,6 +82,7 @@ app.use("/api/logs", LogsRoutes)
 app.use("/api/password", passwordResetRoutes)
 app.use("/api/pessoas", pessoasRoutes)
 app.use("/api/imagens", imagemRoutes)
+app.use("/api/historico-precos", historicoPrecoRoutes)
 
 // --- 5. Rota Principal e Tratamento de Erros ---
 // Rota para servir a página de login como a página principal do site

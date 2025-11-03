@@ -52,7 +52,10 @@ class VendaModel {
   }
 
   static async buscarTodos(filtros = {}) {
-    let query = `
+    try {
+      console.log(" VendaModel.buscarTodos - Filtros:", filtros)
+
+      let query = `
             SELECT v.*, 
                    c.cpf as cliente_cpf,
                    pc.nome as cliente_nome,
@@ -67,37 +70,48 @@ class VendaModel {
             LEFT JOIN pessoa pu ON u.pessoa_id = pu.pessoa_id
             WHERE 1=1
         `
-    const params = []
+      const params = []
 
-    if (filtros.cliente_id) {
-      query += " AND v.cliente_id = ?"
-      params.push(filtros.cliente_id)
+      if (filtros.cliente_id) {
+        query += " AND v.cliente_id = ?"
+        params.push(filtros.cliente_id)
+      }
+
+      if (filtros.status) {
+        query += " AND v.status = ?"
+        params.push(filtros.status)
+      }
+
+      if (filtros.forma_pagamento_id) {
+        query += " AND v.forma_pagamento_id = ?"
+        params.push(filtros.forma_pagamento_id)
+      }
+
+      if (filtros.data_inicio) {
+        query += " AND DATE(v.data_hora) >= ?"
+        params.push(filtros.data_inicio)
+      }
+
+      if (filtros.data_fim) {
+        query += " AND DATE(v.data_hora) <= ?"
+        params.push(filtros.data_fim)
+      }
+
+      query += " ORDER BY v.data_hora DESC"
+
+      console.log(" VendaModel.buscarTodos - Query:", query)
+      console.log(" VendaModel.buscarTodos - Params:", params)
+
+      const [rows] = await db.execute(query, params)
+
+      console.log(" VendaModel.buscarTodos - Rows encontradas:", rows.length)
+
+      return rows
+    } catch (error) {
+      console.error(" Erro em VendaModel.buscarTodos:", error)
+      console.error(" Stack trace:", error.stack)
+      throw error
     }
-
-    if (filtros.status) {
-      query += " AND v.status = ?"
-      params.push(filtros.status)
-    }
-
-    if (filtros.forma_pagamento_id) {
-      query += " AND v.forma_pagamento_id = ?"
-      params.push(filtros.forma_pagamento_id)
-    }
-
-    if (filtros.data_inicio) {
-      query += " AND DATE(v.data_hora) >= ?"
-      params.push(filtros.data_inicio)
-    }
-
-    if (filtros.data_fim) {
-      query += " AND DATE(v.data_hora) <= ?"
-      params.push(filtros.data_fim)
-    }
-
-    query += " ORDER BY v.data_hora DESC"
-
-    const [rows] = await db.execute(query, params)
-    return rows
   }
 
   static async atualizar(id, venda) {

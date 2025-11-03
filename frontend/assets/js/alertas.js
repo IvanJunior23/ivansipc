@@ -1,5 +1,5 @@
 // Declare the auth variable before using it
-const auth = {
+window.auth = {
   initialized: false,
   isAuthenticated: () => localStorage.getItem("token") !== null,
   getCurrentUser: async () => {
@@ -13,333 +13,443 @@ const auth = {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("=== INICIANDO ALERTAS ===")
+  console.log(" === INICIANDO ALERTAS ===")
+  await loadAlerts()
+  setupEventListeners()
 
-  if (!auth.initialized) {
-    setTimeout(async () => {
-      await initAlertas()
-    }, 500)
-  } else {
-    await initAlertas()
-  }
+  // Refresh alerts every 2 minutes
+  setInterval(loadAlerts, 120000)
+})
 
-  async function initAlertas() {
-    if (!auth.isAuthenticated()) {
-      window.location.href = "login.html"
-      return
+function setupEventListeners() {
+  // Filter change listeners
+  const filterTipo = document.getElementById("filter-tipo")
+  const filterPrioridade = document.getElementById("filter-prioridade")
+
+  if (filterTipo) filterTipo.addEventListener("change", loadAlerts)
+  if (filterPrioridade) filterPrioridade.addEventListener("change", loadAlerts)
+}
+
+async function loadAlerts() {
+  try {
+    console.log(" Carregando alertas...")
+    const token = getToken()
+    if (!token) return
+
+    const filterTipo = document.getElementById("filter-tipo")?.value || ""
+    const filterPrioridade = document.getElementById("filter-prioridade")?.value || ""
+
+    let endpoint = "/api/alertas/recompra"
+
+    if (filterTipo === "estoque_baixo") {
+      endpoint = "/api/alertas/estoque-baixo"
+    } else if (filterTipo === "venda_pendente") {
+      endpoint = "/api/alertas/vendas-pendentes"
+    } else if (filterTipo === "compra_pendente") {
+      endpoint = "/api/alertas/compras-pendentes"
+    } else if (filterTipo === "recompra" || filterTipo === "") {
+      endpoint = "/api/alertas/recompra"
     }
 
-    try {
-      const userData = await auth.getCurrentUser()
-      updateUserInfo(userData)
-      buildDynamicMenu(userData.tipo_usuario || "vendedor")
-    } catch (error) {
-      console.error("Erro ao buscar usuário:", error)
-      buildDynamicMenu("vendedor")
-    }
+    console.log(" Endpoint:", endpoint)
 
-    await loadAlerts()
-    setupEventListeners()
-    addLogoutButton()
+    const [alertsResponse, statsResponse] = await Promise.all([
+      fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch("/api/alertas/stats", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ])
 
-    // Auto refresh every 30 seconds
-    setInterval(loadAlerts, 30000)
-  }
+    console.log(" Alerts response status:", alertsResponse.status)
+    console.log(" Stats response status:", statsResponse.status)
 
-  function setupEventListeners() {
-    // Filter change listeners
-    document.getElementById("filter-tipo").addEventListener("change", loadAlerts)
-    document.getElementById("filter-prioridade").addEventListener("change", loadAlerts)
-    document.getElementById("filter-status").addEventListener("change", loadAlerts)
+    if (alertsResponse.ok && statsResponse.ok) {
+      const alertsData = await alertsResponse.json()
+      const statsData = await statsResponse.json()
 
-    // Refresh button
-    document.getElementById("refresh-alerts").addEventListener("click", async function () {
-      this.classList.add("loading")
-      this.disabled = true
-      await loadAlerts()
-      this.classList.remove("loading")
-      this.disabled = false
-    })
-  }
+      console.log(" Alerts data:", alertsData)
+      console.log(" Stats data:", statsData)
 
-  async function loadAlerts() {
-    try {
-      const filters = {
-        tipo: document.getElementById("filter-tipo").value,
-        prioridade: document.getElementById("filter-prioridade").value,
-        status: document.getElementById("filter-status").value,
+      renderStats(statsData.data)
+
+      let filteredAlerts = alertsData.data || []
+      console.log(" Total alerts:", filteredAlerts.length)
+
+      if (filterPrioridade && filterTipo !== "venda_pendente" && filterTipo !== "compra_pendente") {
+        filteredAlerts = filteredAlerts.filter((alert) => {
+          if (filterPrioridade === "critical") return alert.quantidade_estoque === 0
+          if (filterPrioridade === "warning")
+            return alert.quantidade_estoque > 0 && alert.quantidade_estoque <= alert.quantidade_minima
+          return true
+        })
       }
 
-      const queryParams = new URLSearchParams()
-      Object.keys(filters).forEach((key) => {
-        if (filters[key]) queryParams.append(key, filters[key])
-      })
-
-      const [alertsResponse, statsResponse] = await Promise.all([
-        fetch(`/api/alertas?${queryParams.toString()}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-        fetch("/api/alertas/stats", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }),
-      ])
-
-      if (alertsResponse.ok && statsResponse.ok) {
-        const alerts = await alertsResponse.json()
-        const stats = await statsResponse.json()
-
-        renderStats(stats)
-        renderAlerts(alerts)
+      if (filterTipo === "venda_pendente") {
+        renderPendingSalesAlerts(filteredAlerts)
+      } else if (filterTipo === "compra_pendente") {
+        renderPendingPurchasesAlerts(filteredAlerts)
       } else {
-        showError("Erro ao carregar alertas")
+        renderReorderAlerts(filteredAlerts)
       }
-    } catch (error) {
-      console.error("Erro ao carregar alertas:", error)
+    } else {
+      console.error(" Erro ao carregar alertas - Status:", alertsResponse.status)
+      const errorText = await alertsResponse.text()
+      console.error(" Error response:", errorText)
       showError("Erro ao carregar alertas")
     }
+  } catch (error) {
+    console.error(" Erro ao carregar alertas:", error)
+    showError("Erro ao carregar alertas: " + error.message)
   }
+}
 
-  function renderStats(stats) {
-    const container = document.getElementById("alert-stats")
+function renderStats(stats) {
+  const container = document.getElementById("alert-stats")
+  if (!container) return
+
+  container.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon critical">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <div class="stat-info">
+        <h3>${stats.critical || 0}</h3>
+        <p>Estoque Zerado</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon warning">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="stat-info">
+        <h3>${stats.warning || 0}</h3>
+        <p>Estoque Baixo</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon info">
+        <i class="fas fa-info-circle"></i>
+      </div>
+      <div class="stat-info">
+        <h3>${stats.info || 0}</h3>
+        <p>Pendências</p>
+      </div>
+    </div>
+  `
+}
+
+function renderPendingSalesAlerts(alerts) {
+  const container = document.getElementById("alerts-container")
+  if (!container) return
+
+  if (!alerts || alerts.length === 0) {
     container.innerHTML = `
-            <div class="stat-card">
-                <div class="stat-icon critical">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>${stats.critical || 0}</h3>
-                    <p>Alertas Críticos</p>
-                </div>
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <h3>Nenhuma venda pendente</h3>
+        <p>Todas as vendas foram finalizadas.</p>
+      </div>
+    `
+    return
+  }
+
+  container.innerHTML = alerts
+    .map((alert) => {
+      const dataVenda = new Date(alert.data_hora).toLocaleString("pt-BR")
+      const valorTotal = alert.valor_total ? `R$ ${Number.parseFloat(alert.valor_total).toFixed(2)}` : "N/A"
+
+      return `
+        <div class="alert-item">
+          <div class="alert-priority info"></div>
+          <div class="alert-icon info">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">
+              Venda #${alert.venda_id} - ${alert.cliente_nome || "Cliente não identificado"}
             </div>
-            <div class="stat-card">
-                <div class="stat-icon warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>${stats.warning || 0}</h3>
-                    <p>Avisos</p>
-                </div>
+            <div class="alert-description">
+              <strong>Valor Total:</strong> ${valorTotal} | 
+              <strong>Data:</strong> ${dataVenda}
             </div>
-            <div class="stat-card">
-                <div class="stat-icon info">
-                    <i class="fas fa-info-circle"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>${stats.info || 0}</h3>
-                    <p>Informações</p>
-                </div>
+            <div class="alert-description">
+              <strong>Vendedor:</strong> ${alert.vendedor_email || "N/A"}
             </div>
-        `
-  }
-
-  function renderAlerts(alerts) {
-    const container = document.getElementById("alerts-container")
-
-    if (!alerts || alerts.length === 0) {
-      container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-bell-slash"></i>
-                    <h3>Nenhum alerta encontrado</h3>
-                    <p>Não há alertas ativos no momento.</p>
-                </div>
-            `
-      return
-    }
-
-    container.innerHTML = alerts
-      .map(
-        (alert) => `
-            <div class="alert-item" data-id="${alert.id}">
-                <div class="alert-priority ${alert.prioridade}"></div>
-                <div class="alert-icon ${alert.prioridade}">
-                    <i class="fas fa-${getAlertIcon(alert.tipo)}"></i>
-                </div>
-                <div class="alert-content">
-                    <div class="alert-title">${alert.titulo}</div>
-                    <div class="alert-description">${alert.descricao}</div>
-                    <div class="alert-meta">
-                        <span><i class="fas fa-clock"></i> ${formatDate(alert.data_criacao)}</span>
-                        <span><i class="fas fa-tag"></i> ${alert.tipo.replace("_", " ").toUpperCase()}</span>
-                        ${alert.referencia_id ? `<span><i class="fas fa-link"></i> Ref: ${alert.referencia_id}</span>` : ""}
-                    </div>
-                </div>
-                <div class="alert-actions">
-                    ${
-                      alert.status === "ativo"
-                        ? `
-                        <button class="btn-action btn-resolve" onclick="resolveAlert(${alert.id})">
-                            <i class="fas fa-check"></i> Resolver
-                        </button>
-                        <button class="btn-action btn-dismiss" onclick="dismissAlert(${alert.id})">
-                            <i class="fas fa-times"></i> Dispensar
-                        </button>
-                    `
-                        : `
-                        <span class="status-badge status-resolvido">Resolvido</span>
-                    `
-                    }
-                </div>
+            <div class="alert-meta">
+              <span><i class="fas fa-clock"></i> Aguardando finalização</span>
+              <span><i class="fas fa-tag"></i> Status: Pendente</span>
             </div>
-        `,
-      )
-      .join("")
-  }
-
-  function getAlertIcon(tipo) {
-    const icons = {
-      estoque_baixo: "boxes",
-      venda_pendente: "shopping-cart",
-      compra_pendente: "shopping-bag",
-      sistema: "cog",
-    }
-    return icons[tipo] || "bell"
-  }
-
-  function formatDate(dateString) {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now - date
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffMins < 1) return "Agora"
-    if (diffMins < 60) return `${diffMins}min atrás`
-    if (diffHours < 24) return `${diffHours}h atrás`
-    if (diffDays < 7) return `${diffDays}d atrás`
-
-    return date.toLocaleDateString("pt-BR")
-  }
-
-  // Global functions for alert actions
-  window.resolveAlert = async (alertId) => {
-    try {
-      const response = await fetch(`/api/alertas/${alertId}/resolver`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (response.ok) {
-        showSuccess("Alerta resolvido com sucesso")
-        await loadAlerts()
-      } else {
-        const error = await response.json()
-        showError(error.message || "Erro ao resolver alerta")
-      }
-    } catch (error) {
-      console.error("Erro ao resolver alerta:", error)
-      showError("Erro ao resolver alerta")
-    }
-  }
-
-  window.dismissAlert = async (alertId) => {
-    try {
-      const response = await fetch(`/api/alertas/${alertId}/dispensar`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (response.ok) {
-        showSuccess("Alerta dispensado com sucesso")
-        await loadAlerts()
-      } else {
-        const error = await response.json()
-        showError(error.message || "Erro ao dispensar alerta")
-      }
-    } catch (error) {
-      console.error("Erro ao dispensar alerta:", error)
-      showError("Erro ao dispensar alerta")
-    }
-  }
-
-  function buildDynamicMenu(userType) {
-    const PERMISSIONS = {
-      admin: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Categorias", icon: "fas fa-tags", url: "categorias.html" },
-        { name: "Marcas", icon: "fas fa-copyright", url: "marcas.html" },
-        { name: "Peças", icon: "fas fa-microchip", url: "pecas.html" },
-        { name: "Clientes", icon: "fas fa-users", url: "clientes.html" },
-        { name: "Fornecedores", icon: "fas fa-truck", url: "fornecedores.html" },
-        { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
-        { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
-        { name: "Trocas", icon: "fas fa-exchange-alt", url: "trocas.html" },
-        { name: "Alertas", icon: "fas fa-bell", url: "alertas.html", active: true },
-        { name: "Relatórios", icon: "fas fa-chart-bar", url: "relatorios.html" },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-        { name: "Usuários", icon: "fas fa-user-cog", url: "usuarios.html" },
-        { name: "Contatos", icon: "fas fa-address-book", url: "contatos.html" },
-        { name: "Endereços", icon: "fas fa-map-marker-alt", url: "enderecos.html" },
-      ],
-      vendedor: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Clientes", icon: "fas fa-users", url: "clientes.html" },
-        { name: "Vendas", icon: "fas fa-shopping-cart", url: "vendas.html" },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-      ],
-      estoque: [
-        { name: "Dashboard", icon: "fas fa-home", url: "index.html" },
-        { name: "Categorias", icon: "fas fa-tags", url: "categorias.html" },
-        { name: "Marcas", icon: "fas fa-copyright", url: "marcas.html" },
-        { name: "Peças", icon: "fas fa-microchip", url: "pecas.html" },
-        { name: "Fornecedores", icon: "fas fa-truck", url: "fornecedores.html" },
-        { name: "Compras", icon: "fas fa-shopping-bag", url: "compras.html" },
-        { name: "Alertas", icon: "fas fa-bell", url: "alertas.html", active: true },
-        { name: "FAQ", icon: "fas fa-question-circle", url: "faq.html" },
-      ],
-    }
-
-    const sidebar = document.getElementById("sidebar-menu")
-    const normalizedType = userType.toLowerCase().trim()
-    const permissions = PERMISSIONS[normalizedType] || PERMISSIONS.vendedor
-
-    sidebar.innerHTML = ""
-    permissions.forEach((item) => {
-      const link = document.createElement("a")
-      link.href = item.url
-      link.innerHTML = `<i class="${item.icon}"></i> ${item.name}`
-      if (item.active) link.classList.add("active")
-      sidebar.appendChild(link)
+          </div>
+          <div class="alert-actions">
+            <button class="btn-action btn-resolve" onclick="finalizarVenda(${alert.venda_id})" title="Finalizar venda">
+              <i class="fas fa-check"></i> Finalizar
+            </button>
+            <button class="btn-action btn-dismiss" onclick="visualizarVenda(${alert.venda_id})" title="Ver detalhes">
+              <i class="fas fa-eye"></i> Ver
+            </button>
+          </div>
+        </div>
+      `
     })
+    .join("")
+}
+
+function renderReorderAlerts(alerts) {
+  const container = document.getElementById("alerts-container")
+  if (!container) return
+
+  if (!alerts || alerts.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <h3>Nenhum alerta de recompra</h3>
+        <p>Todos os itens estão com estoque adequado.</p>
+      </div>
+    `
+    return
   }
 
-  function updateUserInfo(user) {
-    const userNameEl = document.querySelector(".user-name")
-    const userRoleEl = document.querySelector(".user-role")
-    if (userNameEl && userRoleEl) {
-      userNameEl.textContent = user.nome || "Usuário"
-      userRoleEl.textContent = user.tipo_usuario
-        ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1)
-        : "Usuário"
+  container.innerHTML = alerts
+    .map((alert) => {
+      const prioridade = alert.quantidade_estoque === 0 ? "critical" : "warning"
+      const icon = alert.quantidade_estoque === 0 ? "exclamation-circle" : "exclamation-triangle"
+      const ultimoPreco = alert.ultimo_preco ? `R$ ${Number.parseFloat(alert.ultimo_preco).toFixed(2)}` : "N/A"
+      const dataUltimaCompra = alert.data_ultima_compra
+        ? new Date(alert.data_ultima_compra).toLocaleDateString("pt-BR")
+        : "Nunca"
+
+      return `
+        <div class="alert-item">
+          <div class="alert-priority ${prioridade}"></div>
+          <div class="alert-icon ${prioridade}">
+            <i class="fas fa-${icon}"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">
+              ${alert.nome} (${alert.codigo})
+              ${alert.quantidade_estoque === 0 ? '<span style="color: #e74c3c; font-weight: bold;"> - ESTOQUE ZERADO</span>' : ""}
+            </div>
+            <div class="alert-description">
+              <strong>Estoque:</strong> ${alert.quantidade_estoque} / Mínimo: ${alert.quantidade_minima} | 
+              <strong>Sugestão:</strong> Comprar ${alert.quantidade_sugerida} unidades
+            </div>
+            <div class="alert-description">
+              ${
+                alert.fornecedor_preferencial
+                  ? `<strong>Fornecedor:</strong> ${alert.fornecedor_preferencial} ${alert.fornecedor_telefone ? `(${alert.fornecedor_telefone})` : ""}`
+                  : '<strong>Fornecedor:</strong> <span style="color: #e74c3c;">Não definido</span>'
+              }
+            </div>
+            <div class="alert-description">
+              <strong>Último preço:</strong> ${ultimoPreco} | 
+              <strong>Última compra:</strong> ${dataUltimaCompra}
+            </div>
+            <div class="alert-meta">
+              <span><i class="fas fa-tag"></i> ${alert.categoria_nome || "Sem categoria"}</span>
+              <span><i class="fas fa-copyright"></i> ${alert.marca_nome || "Sem marca"}</span>
+            </div>
+          </div>
+          <div class="alert-actions">
+            <button class="btn-action btn-resolve" onclick="criarCompraRapida(${alert.peca_id}, ${alert.fornecedor_id || "null"}, ${alert.quantidade_sugerida})" title="Criar compra">
+              <i class="fas fa-shopping-cart"></i> Comprar
+            </button>
+          </div>
+        </div>
+      `
+    })
+    .join("")
+}
+
+function renderPendingPurchasesAlerts(alerts) {
+  const container = document.getElementById("alerts-container")
+  if (!container) return
+
+  if (!alerts || alerts.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <h3>Nenhuma compra pendente</h3>
+        <p>Todas as compras foram recebidas.</p>
+      </div>
+    `
+    return
+  }
+
+  container.innerHTML = alerts
+    .map((alert) => {
+      const dataCompra = new Date(alert.data_compra).toLocaleString("pt-BR")
+      const valorTotal = alert.valor_total ? `R$ ${Number.parseFloat(alert.valor_total).toFixed(2)}` : "N/A"
+
+      return `
+        <div class="alert-item">
+          <div class="alert-priority info"></div>
+          <div class="alert-icon info">
+            <i class="fas fa-shopping-bag"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">
+              Compra #${alert.compra_id} - ${alert.fornecedor_nome || "Fornecedor não identificado"}
+            </div>
+            <div class="alert-description">
+              <strong>Valor Total:</strong> ${valorTotal} | 
+              <strong>Data:</strong> ${dataCompra}
+            </div>
+            <div class="alert-description">
+              <strong>Usuário:</strong> ${alert.usuario_email || "N/A"}
+            </div>
+            <div class="alert-meta">
+              <span><i class="fas fa-clock"></i> Aguardando recebimento</span>
+              <span><i class="fas fa-tag"></i> Status: Pendente</span>
+            </div>
+          </div>
+          <div class="alert-actions">
+            <button class="btn-action btn-resolve" onclick="receberCompra(${alert.compra_id})" title="Receber compra">
+              <i class="fas fa-check"></i> Receber
+            </button>
+            <button class="btn-action btn-dismiss" onclick="visualizarCompra(${alert.compra_id})" title="Ver detalhes">
+              <i class="fas fa-eye"></i> Ver
+            </button>
+          </div>
+        </div>
+      `
+    })
+    .join("")
+}
+
+async function finalizarVenda(vendaId) {
+  if (!confirm("Deseja finalizar esta venda? O estoque será reduzido.")) {
+    return
+  }
+
+  try {
+    const token = getToken()
+    const response = await fetch(`/api/vendas/${vendaId}/finalizar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+
+    const result = await response.json()
+
+    if (response.ok) {
+      alert("Venda finalizada com sucesso!")
+      loadAlerts() // Refresh alerts
+    } else {
+      alert("Erro ao finalizar venda: " + (result.message || "Erro desconhecido"))
     }
+  } catch (error) {
+    console.error(" Erro ao finalizar venda:", error)
+    alert("Erro ao finalizar venda")
+  }
+}
+
+function visualizarVenda(vendaId) {
+  window.location.href = `vendas.html?id=${vendaId}`
+}
+
+async function receberCompra(compraId) {
+  if (!confirm("Deseja receber esta compra? O estoque será atualizado.")) {
+    return
   }
 
-  function addLogoutButton() {
-    const userInfo = document.querySelector(".user-info")
-    if (userInfo && !userInfo.querySelector(".logout-btn")) {
-      const logoutBtn = document.createElement("button")
-      logoutBtn.className = "logout-btn"
-      logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair'
-      logoutBtn.onclick = () => auth.logout()
-      logoutBtn.style.cssText =
-        "margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;"
-      userInfo.appendChild(logoutBtn)
+  try {
+    const token = getToken()
+    const response = await fetch(`/api/compras/${compraId}/receber`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+
+    const result = await response.json()
+
+    if (response.ok) {
+      alert("Compra recebida com sucesso!")
+      loadAlerts()
+    } else {
+      alert("Erro ao receber compra: " + (result.message || "Erro desconhecido"))
     }
+  } catch (error) {
+    console.error(" Erro ao receber compra:", error)
+    alert("Erro ao receber compra")
+  }
+}
+
+function visualizarCompra(compraId) {
+  window.location.href = `compras.html?id=${compraId}`
+}
+
+function refreshAlerts() {
+  loadAlerts()
+}
+
+function filterAlerts() {
+  loadAlerts()
+}
+
+function getToken() {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    console.warn(" Token não encontrado, redirecionando para login...")
+    window.location.href = "/login.html"
+    return null
+  }
+  return token.trim()
+}
+
+async function criarCompraRapida(pecaId, fornecedorId, quantidadeSugerida) {
+  if (!fornecedorId) {
+    alert("Esta peça não tem um fornecedor definido. Por favor, cadastre um fornecedor primeiro.")
+    return
   }
 
-  function showSuccess(message) {
-    // Implementation for success toast
-    console.log("Success:", message)
-  }
+  const quantidade = prompt(`Quantidade a comprar (sugerido: ${quantidadeSugerida}):`, quantidadeSugerida)
+  if (!quantidade || quantidade <= 0) return
 
-  function showError(message) {
-    // Implementation for error toast
-    console.error("Error:", message)
+  try {
+    const token = getToken()
+    const response = await fetch("/api/compras", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fornecedor_id: fornecedorId,
+        itens: [
+          {
+            peca_id: pecaId,
+            quantidade: Number.parseInt(quantidade),
+          },
+        ],
+      }),
+    })
+
+    const result = await response.json()
+
+    if (response.ok) {
+      alert("Compra criada com sucesso!")
+      loadAlerts()
+    } else {
+      alert("Erro ao criar compra: " + (result.message || "Erro desconhecido"))
+    }
+  } catch (error) {
+    console.error(" Erro ao criar compra:", error)
+    alert("Erro ao criar compra: " + error.message)
   }
-})
+}
+
+function showSuccess(message) {
+  console.log(" Success:", message)
+  alert(message)
+}
+
+function showError(message) {
+  console.error(" Error:", message)
+  alert(message)
+}

@@ -628,7 +628,7 @@
                             maxlength="100" 
                             placeholder="Ex: Cartão de Crédito, PIX, Boleto..."
                             required
-                            oninput="updateCharCounter(this, 100)">
+                            oninput="updateCharCounter(this, 100); validateNomeDuplicado()">
                         <small class="field-info">Digite um nome claro e descritivo</small>
                         <span class="char-counter" id="nomeCounter">0/100</span>
                     </div>

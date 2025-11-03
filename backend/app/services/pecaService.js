@@ -4,7 +4,37 @@ const CategoriaModel = require("../models/categoriaModel")
 const MarcaModel = require("../models/marcaModel")
 
 class PecaService {
+  static async gerarCodigoAutomatico(categoriaId, marcaId) {
+    try {
+      // Get category and brand info
+      const categoria = categoriaId ? await CategoriaModel.buscarPorId(categoriaId) : null
+      const marca = marcaId ? await MarcaModel.buscarPorId(marcaId) : null
+
+      // Create prefix from category and brand initials
+      const categoriaPrefix = categoria ? categoria.nome.substring(0, 3).toUpperCase() : "GEN"
+      const marcaPrefix = marca ? marca.nome.substring(0, 3).toUpperCase() : "GEN"
+
+      // Get the count of existing parts to generate sequential number
+      const pecas = await PecaModel.buscarTodos(true) // Include inactive to get accurate count
+      const sequencial = String(pecas.length + 1).padStart(4, "0")
+
+      // Format: CAT-MAR-0001
+      const codigo = `${categoriaPrefix}-${marcaPrefix}-${sequencial}`
+
+      return codigo
+    } catch (error) {
+      console.error("Erro ao gerar código automático:", error)
+      // Fallback to timestamp-based code if generation fails
+      return `PEC-${Date.now()}`
+    }
+  }
+
   static async criarPeca(dadosPeca, imagens = []) {
+    if (!dadosPeca.codigo || dadosPeca.codigo.trim() === "") {
+      dadosPeca.codigo = await this.gerarCodigoAutomatico(dadosPeca.categoria_id, dadosPeca.marca_id)
+      console.log("Código gerado automaticamente:", dadosPeca.codigo)
+    }
+
     // Validar categoria se fornecida
     if (dadosPeca.categoria_id) {
       const categoria = await CategoriaModel.buscarPorId(dadosPeca.categoria_id)
@@ -184,7 +214,7 @@ class PecaService {
   }
 
   static async getAllPecas() {
-    const result = await PecaModel.buscarTodos(true)
+    const result = await PecaModel.buscarTodos(false) // Only active parts
     return result
   }
 
@@ -202,6 +232,10 @@ class PecaService {
     await PecaModel.adicionarImagem(pecaId, imagemId)
 
     return { message: "Imagem vinculada com sucesso" }
+  }
+
+  static async buscarPecasPorFornecedor(fornecedorId) {
+    return await PecaModel.buscarTodos(false, { fornecedor_id: fornecedorId })
   }
 }
 

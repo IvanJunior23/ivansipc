@@ -35,6 +35,50 @@ class AlertaService {
     }
   }
 
+  static async getAlertasRecompra() {
+    try {
+      return await AlertaModel.getAlertasRecompra()
+    } catch (error) {
+      throw new Error(`Erro ao buscar alertas de recompra: ${error.message}`)
+    }
+  }
+
+  static async getVendasPendentes() {
+    try {
+      return await AlertaModel.getVendasPendentes()
+    } catch (error) {
+      throw new Error(`Erro ao buscar vendas pendentes: ${error.message}`)
+    }
+  }
+
+  static async getComprasPendentes() {
+    try {
+      return await AlertaModel.getComprasPendentes()
+    } catch (error) {
+      throw new Error(`Erro ao buscar compras pendentes: ${error.message}`)
+    }
+  }
+
+  static async getStats() {
+    try {
+      const [alertasRecompra, estoqueBaixo, vendasPendentes, comprasPendentes] = await Promise.all([
+        AlertaModel.getAlertasRecompra(),
+        AlertaModel.getEstoqueBaixo(),
+        AlertaModel.getVendasPendentes(),
+        AlertaModel.getComprasPendentes(),
+      ])
+
+      return {
+        estoque_baixo: estoqueBaixo.length,
+        recompra: alertasRecompra.length,
+        vendas_pendentes: vendasPendentes.length,
+        compras_pendentes: comprasPendentes.length,
+      }
+    } catch (error) {
+      throw new Error(`Erro ao buscar estatísticas: ${error.message}`)
+    }
+  }
+
   // Contar alertas
   static async getContadorAlertas() {
     try {

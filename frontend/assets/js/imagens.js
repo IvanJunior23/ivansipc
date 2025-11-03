@@ -382,7 +382,7 @@ class ImagemManager {
   }
 
   async editImagem(id) {
-    console.log("📝 Editando imagem ID:", id)
+    console.log("��� Editando imagem ID:", id)
     const imagem = this.imagens.find((img) => img.imagem_id === id)
     if (!imagem) {
       this.showToast("Imagem não encontrada", "error")

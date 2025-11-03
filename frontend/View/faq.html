@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FAQ - SIPC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/common.css">
     <style>
         body {
             margin: 0;
@@ -464,13 +465,6 @@
         <div class="user-info">
             <div class="user-name">Carregando...</div>
             <div class="user-role">...</div>
-            <!-- Added password change and logout buttons -->
-            <button onclick="showChangePasswordModal()" style="background: #1ABC9C; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%;">
-                <i class="fas fa-key"></i> Alterar Senha
-            </button>
-            <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 5px; width: 100%;">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
         </div>
     </div>
     
@@ -499,7 +493,7 @@
         </div>
     </div>
 
-    <!-- Added change password modal -->
+    <!-- Added change password modal following categorias.html pattern -->
     <div id="changePasswordModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -534,40 +528,90 @@
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/common.js"></script>
     <script src="../assets/js/faq.js"></script>
+    
+    <!-- Added initialization script following categorias.html pattern -->
     <script>
-        
-        
-        function updateUserInfo(user) {
-            const userNameEl = document.querySelector('.user-name');
-            const userRoleEl = document.querySelector('.user-role');
-            if (userNameEl && userRoleEl) {
-                userNameEl.textContent = user.nome || 'Usuário';
-                userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("🔄 Iniciando verificação de permissões para a página atual");
+            if (!window.auth.initialized) {
+                setTimeout(async () => {
+                    await initPageWithPermissions();
+                }, 500);
+            } else {
+                await initPageWithPermissions();
             }
-        }
-        
-        function addLogoutButton() {
-            const userInfo = document.querySelector('.user-info');
-            if (userInfo && !userInfo.querySelector('.logout-btn')) {
-                const logoutBtn = document.createElement('button');
-                logoutBtn.className = 'logout-btn';
-                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
-                logoutBtn.onclick = () => auth.logout();
-                logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-                userInfo.appendChild(logoutBtn);
-            }
-        }
+            
+            async function initPageWithPermissions() {
+                const currentPage = window.location.pathname.split('/').pop();
 
-        window.showChangePasswordModal = function() {
+                console.log("🔐 Verificando autenticação...");
+                if (!window.auth.isAuthenticated()) {
+                    console.log("❌ Usuário não autenticado, redirecionando para login");
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                try {
+                    const userData = await window.auth.getCurrentUser();
+                    console.log("✅ Dados do usuário:", userData);
+                    console.log("👤 Tipo de usuário:", userData.tipo_usuario);
+                    
+                    const hasAccess = window.PermissionManager.hasPageAccess(userData.tipo_usuario, currentPage);
+                    console.log(`🔑 Usuário tem acesso à página ${currentPage}:`, hasAccess);
+                    
+                    if (!hasAccess) {
+                        console.log(`🚫 Acesso negado para ${currentPage}`);
+                        alert('Acesso negado! Você não tem permissão para acessar esta página.');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    
+                    console.log("✅ Acesso permitido, carregando página");
+                    updateUserInfo(userData);
+                    
+                    window.PermissionManager.buildMenu(userData.tipo_usuario || 'vendedor', currentPage);
+                } catch (error) {
+                    console.error('❌ Erro ao buscar usuário:', error);
+                    alert('Erro ao verificar permissões. Redirecionando para o login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                addLogoutButton();
+            }
+            
+            function updateUserInfo(user) {
+                const userNameEl = document.querySelector('.user-name');
+                const userRoleEl = document.querySelector('.user-role');
+                if (userNameEl && userRoleEl) {
+                    userNameEl.textContent = user.nome || 'Usuário';
+                    userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
+                }
+            }
+            
+            function addLogoutButton() {
+                const userInfo = document.querySelector('.user-info');
+                if (userInfo && !userInfo.querySelector('.logout-btn')) {
+                    const logoutBtn = document.createElement('button');
+                    logoutBtn.className = 'logout-btn';
+                    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
+                    logoutBtn.onclick = () => window.auth.logout();
+                    logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
+                    userInfo.appendChild(logoutBtn);
+                }
+            }
+        });
+        
+        function showChangePasswordModal() {
             document.getElementById('changePasswordModal').style.display = 'block';
         }
 
-        window.closeChangePasswordModal = function() {
+        function closeChangePasswordModal() {
             document.getElementById('changePasswordModal').style.display = 'none';
             document.getElementById('changePasswordForm').reset();
         }
 
-        window.changePassword = async function(event) {
+        async function changePassword(event) {
             event.preventDefault();
             
             const currentPassword = document.getElementById('currentPassword').value;
@@ -575,16 +619,13 @@
             const confirmNewPassword = document.getElementById('confirmNewPassword').value;
             
             if (newPassword !== confirmNewPassword) {
-                showToast('As senhas não coincidem', 'error');
+                alert('As senhas não coincidem');
                 return;
             }
             
             try {
-                const response = await auth.makeAuthenticatedRequest('/api/auth/change-password', {
+                const response = await window.auth.authenticatedRequest('/api/auth/change-password', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({
                         currentPassword: currentPassword.trim(),
                         newPassword: newPassword.trim()
@@ -594,26 +635,15 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showToast('Senha alterada com sucesso', 'success');
+                    alert('Senha alterada com sucesso');
                     closeChangePasswordModal();
                 } else {
-                    showToast(data.message || 'Erro ao alterar senha', 'error');
+                    alert(data.message || 'Erro ao alterar senha');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                showToast('Erro ao alterar senha', 'error');
+                alert('Erro ao alterar senha');
             }
-        }
-
-        function showToast(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
         }
 
         // Close modals when clicking outside
@@ -626,6 +656,5 @@
             });
         }
     </script>
-    
 </body>
 </html>

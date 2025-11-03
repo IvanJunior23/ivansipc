@@ -168,14 +168,13 @@ router.get("/vendas", authenticateToken, async (req, res) => {
     const { data_inicio, data_fim, status } = req.query
 
     let query = `
-            SELECT 
-                DATE(v.data_hora) as data, 
-                COUNT(*) as total_vendas, 
-                SUM(v.valor_total) as faturamento,
-                AVG(v.valor_total) as ticket_medio
-            FROM venda v
-            WHERE 1=1
-        `
+    SELECT
+      DATE(v.data_hora) as data,
+      COUNT(*) as total_vendas,
+      SUM(v.valor_total) as faturamento,
+      AVG(v.valor_total) as ticket_medio
+    FROM venda v
+    WHERE 1 = 1`
     const params = []
 
     if (status) {
@@ -297,17 +296,20 @@ router.get("/clientes", authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(`
             SELECT 
-                c.nome_completo,
+                p.nome as nome_completo,
                 cont.email,
                 cont.telefone,
                 COUNT(v.venda_id) as total_compras,
                 COALESCE(SUM(v.valor_total), 0) as valor_total_compras,
-                MAX(v.data_hora) as ultima_compra
+                MAX(v.data_hora) as ultima_compra,
+                p.tipo_pessoa,
+                c.status as ativo
             FROM cliente c
-            JOIN contato cont ON c.contato_id = cont.contato_id
+            JOIN pessoa p ON c.pessoa_id = p.pessoa_id
+            LEFT JOIN contato cont ON c.contato_id = cont.contato_id
             LEFT JOIN venda v ON c.cliente_id = v.cliente_id AND v.status = 'concluida'
             WHERE c.status = TRUE
-            GROUP BY c.cliente_id, c.nome_completo, cont.email, cont.telefone
+            GROUP BY c.cliente_id, p.nome, cont.email, cont.telefone, p.tipo_pessoa, c.status
             ORDER BY valor_total_compras DESC
         `)
 
@@ -326,5 +328,8 @@ router.get("/clientes", authenticateToken, async (req, res) => {
     })
   }
 })
+
+router.get("/clientes-detalhado", authenticateToken, RelatorioController.gerarRelatorioClientes)
+router.get("/financeiro", authenticateToken, RelatorioController.gerarRelatorioFinanceiro)
 
 module.exports = router

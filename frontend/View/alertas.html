@@ -395,21 +395,16 @@
             <div class="filters">
                 <select id="filter-tipo" onchange="filterAlerts()">
                     <option value="">Todos os tipos</option>
+                    <option value="recompra">Alertas de Recompra</option>
                     <option value="estoque_baixo">Estoque Baixo</option>
                     <option value="venda_pendente">Venda Pendente</option>
                     <option value="compra_pendente">Compra Pendente</option>
-                    <option value="sistema">Sistema</option>
                 </select>
                 <select id="filter-prioridade" onchange="filterAlerts()">
                     <option value="">Todas as prioridades</option>
                     <option value="critical">Crítica</option>
                     <option value="warning">Aviso</option>
                     <option value="info">Informação</option>
-                </select>
-                <select id="filter-status" onchange="filterAlerts()">
-                    <option value="ativo">Ativos</option>
-                    <option value="resolvido">Resolvidos</option>
-                    <option value="todos">Todos</option>
                 </select>
             </div>
         </div>
@@ -461,73 +456,5 @@
     <script src="../assets/js/auth.js"></script>
     <script src="../assets/js/common.js"></script>
     <script src="../assets/js/alertas.js"></script>
-    <script>
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log(" Iniciando verificação de permissões para a página atual");
-    if (!window.auth.initialized) {
-        setTimeout(async () => {
-            await initPageWithPermissions();
-        }, 500);
-    } else {
-        await initPageWithPermissions();
-    }
-    async function initPageWithPermissions() {
-        const currentPage = window.location.pathname.split('/').pop();
-
-        console.log(" Verificando autenticação...");
-        if (!window.auth.isAuthenticated()) {
-            console.log(" Usuário não autenticado, redirecionando para login");
-            window.location.href = '/login.html';
-            return;
-        }
-        try {
-            const userData = await window.auth.getCurrentUser();
-            console.log(" Dados do usuário:", userData);
-            console.log(" Tipo de usuário:", userData.tipo_usuario);
-            
-            const hasAccess = window.PermissionManager.hasPageAccess(userData.tipo_usuario, currentPage);
-            console.log(` Usuário tem acesso à página ${currentPage}:`, hasAccess);
-            
-            if (!hasAccess) {
-                console.log(` Acesso negado para ${currentPage}`);
-                alert('Acesso negado! Você não tem permissão para acessar esta página.');
-                window.location.href = 'index.html';
-                return;
-            }
-            console.log(" Acesso permitido, carregando página");
-            updateUserInfo(userData);
-            
-            window.PermissionManager.buildMenu(userData.tipo_usuario || 'vendedor', currentPage);
-        } catch (error) {
-            console.error(' Erro ao buscar usuário:', error);
-            alert('Erro ao verificar permissões. Redirecionando para o login.');
-            window.location.href = '/login.html';
-            return;
-        }
-        addLogoutButton();
-    }
-        
-        function updateUserInfo(user) {
-            const userNameEl = document.querySelector('.user-name');
-            const userRoleEl = document.querySelector('.user-role');
-            if (userNameEl && userRoleEl) {
-                userNameEl.textContent = user.nome || 'Usuário';
-                userRoleEl.textContent = user.tipo_usuario ? user.tipo_usuario.charAt(0).toUpperCase() + user.tipo_usuario.slice(1) : 'Usuário';
-            }
-        }
-        
-        function addLogoutButton() {
-            const userInfo = document.querySelector('.user-info');
-            if (userInfo && !userInfo.querySelector('.logout-btn')) {
-                const logoutBtn = document.createElement('button');
-                logoutBtn.className = 'logout-btn';
-                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Sair';
-                logoutBtn.onclick = () => auth.logout();
-                logoutBtn.style.cssText = 'margin-top: 10px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-                userInfo.appendChild(logoutBtn);
-            }
-        }
-    });
-    </script>
 </body>
 </html>

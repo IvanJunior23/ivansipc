@@ -115,14 +115,27 @@ const validatePassword = (senha, confirmarSenha = null) => {
 
 const validateUserCreation = (req, res, next) => {
   const errors = []
-  const { pessoa_id, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
+  const { nome, telefone, email, confirmarEmail, senha, confirmarSenha, tipo_usuario, endereco } = req.body
 
   req.body = sanitizeObject(req.body)
 
-  if (!pessoa_id) {
-    errors.push("Pessoa é obrigatória")
-  } else if (isNaN(pessoa_id) || pessoa_id <= 0) {
-    errors.push("Pessoa deve ser um ID válido")
+  // Validar nome
+  if (!nome || !nome.trim()) {
+    errors.push("Nome é obrigatório")
+  } else {
+    const lengthError = validateFieldLength("nome", nome.trim())
+    if (lengthError) errors.push(lengthError)
+  }
+
+  // Validar telefone (opcional)
+  if (telefone && telefone.trim()) {
+    const lengthError = validateFieldLength("telefone", telefone.trim())
+    if (lengthError) errors.push(lengthError)
+
+    const phoneRegex = /^[\d\s\-()+]+$/
+    if (!phoneRegex.test(telefone.trim())) {
+      errors.push("Formato de telefone inválido")
+    }
   }
 
   const emailErrors = validateEmail(email)
@@ -143,6 +156,31 @@ const validateUserCreation = (req, res, next) => {
     errors.push("Tipo de usuário deve ser: admin, vendedor ou estoque")
   }
 
+  // Validar endereço (opcional, mas se fornecido deve estar completo)
+  if (endereco) {
+    if (endereco.logradouro && !endereco.logradouro.trim()) {
+      errors.push("Logradouro não pode estar vazio")
+    }
+    if (endereco.numero && !endereco.numero.trim()) {
+      errors.push("Número não pode estar vazio")
+    }
+    if (endereco.bairro && !endereco.bairro.trim()) {
+      errors.push("Bairro não pode estar vazio")
+    }
+    if (endereco.cidade && !endereco.cidade.trim()) {
+      errors.push("Cidade não pode estar vazia")
+    }
+    if (endereco.estado && endereco.estado.trim() && endereco.estado.trim().length !== 2) {
+      errors.push("Estado deve ter exatamente 2 caracteres")
+    }
+    if (endereco.cep && endereco.cep.trim()) {
+      const cepRegex = /^\d{5}-?\d{3}$/
+      if (!cepRegex.test(endereco.cep.trim())) {
+        errors.push("Formato de CEP inválido (use: 12345-678 ou 12345678)")
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return res.status(400).json({
       success: false,
@@ -156,15 +194,28 @@ const validateUserCreation = (req, res, next) => {
 
 const validateUserUpdate = (req, res, next) => {
   const errors = []
-  const { pessoa_id, email, confirmarEmail, senha, confirmarSenha, tipo_usuario } = req.body
+  const { nome, telefone, email, confirmarEmail, senha, confirmarSenha, tipo_usuario, endereco } = req.body
 
   req.body = sanitizeObject(req.body)
 
-  if (pessoa_id !== undefined) {
-    if (!pessoa_id) {
-      errors.push("Pessoa não pode estar vazia")
-    } else if (isNaN(pessoa_id) || pessoa_id <= 0) {
-      errors.push("Pessoa deve ser um ID válido")
+  // Validar nome (opcional na atualização)
+  if (nome !== undefined) {
+    if (!nome || !nome.trim()) {
+      errors.push("Nome não pode estar vazio")
+    } else {
+      const lengthError = validateFieldLength("nome", nome.trim())
+      if (lengthError) errors.push(lengthError)
+    }
+  }
+
+  // Validar telefone (opcional)
+  if (telefone !== undefined && telefone && telefone.trim()) {
+    const lengthError = validateFieldLength("telefone", telefone.trim())
+    if (lengthError) errors.push(lengthError)
+
+    const phoneRegex = /^[\d\s\-()+]+$/
+    if (!phoneRegex.test(telefone.trim())) {
+      errors.push("Formato de telefone inválido")
     }
   }
 
@@ -188,6 +239,31 @@ const validateUserUpdate = (req, res, next) => {
 
   if (tipo_usuario !== undefined && !["admin", "vendedor", "estoque"].includes(tipo_usuario)) {
     errors.push("Tipo de usuário deve ser: admin, vendedor ou estoque")
+  }
+
+  // Validar endereço (opcional, mas se fornecido deve estar completo)
+  if (endereco) {
+    if (endereco.logradouro && !endereco.logradouro.trim()) {
+      errors.push("Logradouro não pode estar vazio")
+    }
+    if (endereco.numero && !endereco.numero.trim()) {
+      errors.push("Número não pode estar vazio")
+    }
+    if (endereco.bairro && !endereco.bairro.trim()) {
+      errors.push("Bairro não pode estar vazio")
+    }
+    if (endereco.cidade && !endereco.cidade.trim()) {
+      errors.push("Cidade não pode estar vazia")
+    }
+    if (endereco.estado && endereco.estado.trim() && endereco.estado.trim().length !== 2) {
+      errors.push("Estado deve ter exatamente 2 caracteres")
+    }
+    if (endereco.cep && endereco.cep.trim()) {
+      const cepRegex = /^\d{5}-?\d{3}$/
+      if (!cepRegex.test(endereco.cep.trim())) {
+        errors.push("Formato de CEP inválido (use: 12345-678 ou 12345678)")
+      }
+    }
   }
 
   if (errors.length > 0) {
@@ -220,7 +296,7 @@ const validateContact = (req, res, next) => {
     const lengthError = validateFieldLength("telefone", telefone.trim())
     if (lengthError) errors.push(lengthError)
 
-    const phoneRegex = /^[\d\s\-$$$$+]+$/
+    const phoneRegex = /^[\d\s\-()+]+$/
     if (!phoneRegex.test(telefone.trim())) {
       errors.push("Formato de telefone inválido")
     }
@@ -236,35 +312,6 @@ const validateContact = (req, res, next) => {
       success: false,
       error: "Dados inválidos",
       details: errors,
-    })
-  }
-
-  next()
-}
-
-const validatePessoa = (req, res, next) => {
-  const { nome, status } = req.body
-  const errors = []
-
-  if (!nome || nome.trim().length === 0) {
-    errors.push({ field: "nome", message: "Nome é obrigatório" })
-  } else if (nome.trim().length < 2) {
-    errors.push({ field: "nome", message: "Nome deve ter pelo menos 2 caracteres" })
-  } else if (nome.trim().length > 255) {
-    errors.push({ field: "nome", message: "Nome deve ter no máximo 255 caracteres" })
-  } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome.trim())) {
-    errors.push({ field: "nome", message: "Nome deve conter apenas letras e espaços" })
-  }
-
-  if (status && !["ativo", "inativo"].includes(status)) {
-    errors.push({ field: "status", message: 'Status deve ser "ativo" ou "inativo"' })
-  }
-
-  if (errors.length > 0) {
-    return res.status(400).json({
-      success: false,
-      message: "Dados inválidos",
-      errors: errors,
     })
   }
 
@@ -630,22 +677,63 @@ const validateCnpj = (cnpj) => {
 
 const validarCliente = (req, res, next) => {
   const errors = []
-  const { pessoa_id, cpf } = req.body
+  const { cpf, nome, telefone, email, endereco } = req.body
 
   req.body = sanitizeObject(req.body)
 
-  // Validar pessoa_id
-  if (!pessoa_id) {
-    errors.push("ID da pessoa é obrigatório")
+  // Validar nome
+  if (!nome || !nome.trim()) {
+    errors.push("Nome é obrigatório")
   } else {
-    if (!Number.isInteger(Number(pessoa_id)) || Number(pessoa_id) <= 0) {
-      errors.push("ID da pessoa deve ser um número inteiro positivo")
-    }
+    const lengthError = validateFieldLength("nome", nome.trim())
+    if (lengthError) errors.push(lengthError)
   }
 
   // Validar CPF
   const cpfError = validateCpf(cpf)
   if (cpfError) errors.push(cpfError)
+
+  // Validar telefone (opcional)
+  if (telefone && telefone.trim()) {
+    const lengthError = validateFieldLength("telefone", telefone.trim())
+    if (lengthError) errors.push(lengthError)
+
+    const phoneRegex = /^[\d\s\-()+]+$/
+    if (!phoneRegex.test(telefone.trim())) {
+      errors.push("Formato de telefone inválido")
+    }
+  }
+
+  // Validar email (opcional)
+  if (email && email.trim()) {
+    const emailErrors = validateEmail(email)
+    errors.push(...emailErrors)
+  }
+
+  // Validar endereço (opcional, mas se fornecido deve estar completo)
+  if (endereco) {
+    if (endereco.logradouro && !endereco.logradouro.trim()) {
+      errors.push("Logradouro não pode estar vazio")
+    }
+    if (endereco.numero && !endereco.numero.trim()) {
+      errors.push("Número não pode estar vazio")
+    }
+    if (endereco.bairro && !endereco.bairro.trim()) {
+      errors.push("Bairro não pode estar vazio")
+    }
+    if (endereco.cidade && !endereco.cidade.trim()) {
+      errors.push("Cidade não pode estar vazia")
+    }
+    if (endereco.estado && endereco.estado.trim() && endereco.estado.trim().length !== 2) {
+      errors.push("Estado deve ter exatamente 2 caracteres")
+    }
+    if (endereco.cep && endereco.cep.trim()) {
+      const cepRegex = /^\d{5}-?\d{3}$/
+      if (!cepRegex.test(endereco.cep.trim())) {
+        errors.push("Formato de CEP inválido (use: 12345-678 ou 12345678)")
+      }
+    }
+  }
 
   if (errors.length > 0) {
     return res.status(400).json({
@@ -660,22 +748,63 @@ const validarCliente = (req, res, next) => {
 
 const validarFornecedor = (req, res, next) => {
   const errors = []
-  const { pessoa_id, cnpj } = req.body
+  const { cnpj, nome, telefone, email, endereco } = req.body
 
   req.body = sanitizeObject(req.body)
 
-  // Validar pessoa_id
-  if (!pessoa_id) {
-    errors.push("ID da pessoa é obrigatório")
+  // Validar nome
+  if (!nome || !nome.trim()) {
+    errors.push("Nome é obrigatório")
   } else {
-    if (!Number.isInteger(Number(pessoa_id)) || Number(pessoa_id) <= 0) {
-      errors.push("ID da pessoa deve ser um número inteiro positivo")
-    }
+    const lengthError = validateFieldLength("nome", nome.trim())
+    if (lengthError) errors.push(lengthError)
   }
 
   // Validar CNPJ
   const cnpjError = validateCnpj(cnpj)
   if (cnpjError) errors.push(cnpjError)
+
+  // Validar telefone (opcional)
+  if (telefone && telefone.trim()) {
+    const lengthError = validateFieldLength("telefone", telefone.trim())
+    if (lengthError) errors.push(lengthError)
+
+    const phoneRegex = /^[\d\s\-()+]+$/
+    if (!phoneRegex.test(telefone.trim())) {
+      errors.push("Formato de telefone inválido")
+    }
+  }
+
+  // Validar email (opcional)
+  if (email && email.trim()) {
+    const emailErrors = validateEmail(email)
+    errors.push(...emailErrors)
+  }
+
+  // Validar endereço (opcional, mas se fornecido deve estar completo)
+  if (endereco) {
+    if (endereco.logradouro && !endereco.logradouro.trim()) {
+      errors.push("Logradouro não pode estar vazio")
+    }
+    if (endereco.numero && !endereco.numero.trim()) {
+      errors.push("Número não pode estar vazio")
+    }
+    if (endereco.bairro && !endereco.bairro.trim()) {
+      errors.push("Bairro não pode estar vazio")
+    }
+    if (endereco.cidade && !endereco.cidade.trim()) {
+      errors.push("Cidade não pode estar vazia")
+    }
+    if (endereco.estado && endereco.estado.trim() && endereco.estado.trim().length !== 2) {
+      errors.push("Estado deve ter exatamente 2 caracteres")
+    }
+    if (endereco.cep && endereco.cep.trim()) {
+      const cepRegex = /^\d{5}-?\d{3}$/
+      if (!cepRegex.test(endereco.cep.trim())) {
+        errors.push("Formato de CEP inválido (use: 12345-678 ou 12345678)")
+      }
+    }
+  }
 
   if (errors.length > 0) {
     return res.status(400).json({
@@ -929,5 +1058,4 @@ module.exports = {
   validateCpf,
   validateCnpj,
   FIELD_LIMITS,
-  validatePessoa,
 }

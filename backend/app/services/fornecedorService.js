@@ -1,4 +1,5 @@
 const FornecedorModel = require("../models/fornecedorModel")
+const PessoaService = require("./pessoaService")
 const PessoaModel = require("../models/pessoaModel")
 const { pool } = require("../../config/database")
 
@@ -10,25 +11,10 @@ class FornecedorService {
     try {
       await connection.beginTransaction()
 
-      const { pessoa_id, cnpj, created_by } = dadosFornecedor
+      const { cnpj, nome, telefone, email, endereco, created_by } = dadosFornecedor
 
-      console.log(" 🔍 Service - pessoa_id:", pessoa_id, "tipo:", typeof pessoa_id)
       console.log(" 🔍 Service - cnpj:", cnpj, "tipo:", typeof cnpj)
       console.log(" 🔍 Service - created_by:", created_by, "tipo:", typeof created_by)
-
-      // Verificar se pessoa existe e está ativa
-      const pessoa = await PessoaModel.buscarPorId(pessoa_id)
-      if (!pessoa) {
-        throw new Error("Pessoa não encontrada ou inativa")
-      }
-      console.log(" ✅ Service - Pessoa encontrada:", pessoa.nome)
-
-      // Verificar se pessoa já tem fornecedor associado
-      const fornecedorExistente = await FornecedorModel.buscarPorPessoaId(pessoa_id)
-      if (fornecedorExistente) {
-        throw new Error("Esta pessoa já possui um fornecedor associado")
-      }
-      console.log(" ✅ Service - Pessoa não tem fornecedor associado")
 
       // Verificar se CNPJ já existe
       const cnpjExistente = await FornecedorModel.buscarPorCnpj(cnpj)
@@ -37,10 +23,27 @@ class FornecedorService {
       }
       console.log(" ✅ Service - CNPJ disponível")
 
-      // Criar fornecedor (status TRUE por padrão no banco)
-      console.log(" 🔄 Service - Chamando Model.criar com:", { pessoa_id, cnpj, created_by })
+      // Criar pessoa completa (com contato e endereço)
+      const dadosPessoa = {
+        nome,
+        contato:
+          telefone || email
+            ? {
+                nome_completo: nome,
+                telefone: telefone || null,
+                email: email || null,
+              }
+            : null,
+        endereco: endereco || null,
+      }
+
+      const pessoaId = await PessoaService.criarPessoaCompleta(dadosPessoa, created_by)
+      console.log(" ✅ Service - Pessoa criada com ID:", pessoaId)
+
+      // Criar fornecedor vinculado à pessoa
+      console.log(" 🔄 Service - Chamando Model.criar com:", { pessoa_id: pessoaId, cnpj, created_by })
       const fornecedorId = await FornecedorModel.criar({
-        pessoa_id,
+        pessoa_id: pessoaId,
         cnpj,
         created_by,
       })
@@ -81,23 +84,44 @@ class FornecedorService {
         throw new Error("Fornecedor não encontrado")
       }
 
-      const { cnpj, updated_by } = dadosFornecedor
+      const { cnpj, nome, telefone, email, endereco, updated_by } = dadosFornecedor
 
       // Verificar se CNPJ já existe em outro fornecedor
-      if (cnpj !== fornecedorExistente.cnpj) {
+      if (cnpj && cnpj !== fornecedorExistente.cnpj) {
         const cnpjExistente = await FornecedorModel.buscarPorCnpj(cnpj)
         if (cnpjExistente && cnpjExistente.fornecedor_id !== id) {
           throw new Error("Este CNPJ já está cadastrado em outro fornecedor")
         }
       }
 
-      const sucesso = await FornecedorModel.atualizar(id, {
-        cnpj,
-        updated_by,
-      })
+      // Atualizar pessoa completa (com contato e endereço)
+      if (nome || telefone || email || endereco) {
+        const dadosPessoa = {
+          nome: nome || fornecedorExistente.nome,
+          contato:
+            telefone || email
+              ? {
+                  nome_completo: nome || fornecedorExistente.nome,
+                  telefone: telefone || null,
+                  email: email || null,
+                }
+              : null,
+          endereco: endereco || null,
+        }
 
-      if (!sucesso) {
-        throw new Error("Erro ao atualizar fornecedor")
+        await PessoaService.atualizarPessoaCompleta(fornecedorExistente.pessoa_id, dadosPessoa, updated_by)
+      }
+
+      // Atualizar fornecedor
+      if (cnpj) {
+        const sucesso = await FornecedorModel.atualizar(id, {
+          cnpj,
+          updated_by,
+        })
+
+        if (!sucesso) {
+          throw new Error("Erro ao atualizar fornecedor")
+        }
       }
 
       await connection.commit()

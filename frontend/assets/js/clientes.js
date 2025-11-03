@@ -1,37 +1,12 @@
 // Clientes Management JavaScript
 let clientes = []
 let editingClienteId = null
-let pessoas = []
 
 // Initialize page
 document.addEventListener("DOMContentLoaded", () => {
   checkAuth()
-  loadPessoas()
   loadClientes()
 })
-
-async function loadPessoas() {
-  try {
-    const token = getToken()
-    if (!token) return
-
-    const response = await fetch("/api/pessoas", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error("Erro ao carregar pessoas")
-    }
-
-    const result = await response.json()
-    pessoas = result.data || result
-    console.log(" Pessoas carregadas:", pessoas)
-  } catch (error) {
-    showToast("Erro ao carregar pessoas: " + error.message, "error")
-  }
-}
 
 // Load customers from API
 async function loadClientes() {
@@ -60,14 +35,6 @@ async function loadClientes() {
     const result = await response.json()
     clientes = result.data || result
     console.log(" Total de clientes carregados:", clientes.length)
-    console.log(
-      " Clientes (ativos e inativos):",
-      clientes.map((c) => ({
-        id: c.cliente_id,
-        nome: c.nome,
-        status: c.status ? "ATIVO" : "INATIVO",
-      })),
-    )
     renderClientesTable()
   } catch (error) {
     showToast("Erro ao carregar clientes: " + error.message, "error")
@@ -133,10 +100,20 @@ function filterClientes() {
   let filteredClientes = clientes
 
   if (statusFilter) {
-    const statusBool = statusFilter === "ativo"
-    filteredClientes = filteredClientes.filter((cliente) => cliente.status === statusBool)
+    filteredClientes = filteredClientes.filter((cliente) => {
+      // Converte o status do cliente para booleano se for número
+      const clienteStatus = typeof cliente.status === "number" ? cliente.status === 1 : Boolean(cliente.status)
+      const filterStatus = statusFilter === "ativo"
+
+      console.log(
+        ` Filtrando cliente ${cliente.cliente_id}: status=${cliente.status} (${typeof cliente.status}), clienteStatus=${clienteStatus}, filterStatus=${filterStatus}`,
+      )
+
+      return clienteStatus === filterStatus
+    })
   }
 
+  console.log(` Total de clientes após filtro: ${filteredClientes.length}`)
   renderFilteredClientesTable(filteredClientes)
 }
 
@@ -178,90 +155,14 @@ function renderFilteredClientesTable(filteredClientes) {
   })
 }
 
-// Show add customer modal
 function showAddClienteModal() {
   editingClienteId = null
   document.getElementById("clienteModalTitle").textContent = "Novo Cliente"
   document.getElementById("clienteForm").reset()
   document.getElementById("clienteId").value = ""
-  document.getElementById("pessoaInfo").style.display = "none"
-
-  // Carregar pessoas no select
-  const pessoaSelect = document.getElementById("clientePessoa")
-  pessoaSelect.innerHTML = '<option value="">Selecione uma pessoa</option>'
-  pessoas.forEach((pessoa) => {
-    const option = document.createElement("option")
-    option.value = pessoa.pessoa_id
-    option.textContent = `${pessoa.nome} (ID: ${pessoa.pessoa_id})`
-    pessoaSelect.appendChild(option)
-  })
-
   document.getElementById("clienteModal").style.display = "block"
 }
 
-// View customer details
-async function viewCliente(id) {
-  try {
-    showLoading()
-    const token = getToken()
-    if (!token) return
-
-    const response = await fetch(`/api/clientes/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Token expirado ou inválido, redirecionando para login...")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        window.location.href = "/login.html"
-        return
-      }
-      throw new Error("Erro ao carregar detalhes do cliente")
-    }
-
-    const result = await response.json()
-    const cliente = result.data || result
-    renderClienteDetails(cliente)
-    document.getElementById("viewClienteModal").style.display = "block"
-  } catch (error) {
-    showToast("Erro ao carregar detalhes: " + error.message, "error")
-  } finally {
-    hideLoading()
-  }
-}
-
-// Render customer details
-function renderClienteDetails(cliente) {
-  const detailsContainer = document.getElementById("clienteDetails")
-
-  let enderecoCompleto = "-"
-  if (cliente.logradouro) {
-    enderecoCompleto = `${cliente.logradouro}, ${cliente.numero || "S/N"}`
-    if (cliente.complemento) enderecoCompleto += ` - ${cliente.complemento}`
-    if (cliente.bairro) enderecoCompleto += ` - ${cliente.bairro}`
-    if (cliente.cidade && cliente.estado) enderecoCompleto += ` - ${cliente.cidade}/${cliente.estado}`
-    if (cliente.cep) enderecoCompleto += ` - CEP: ${cliente.cep}`
-  }
-
-  detailsContainer.innerHTML = `
-    <div class="customer-details">
-      <div class="customer-info">
-        <h3>${cliente.nome || "Sem nome"}</h3>
-        <p><strong>CPF:</strong> ${cliente.cpf || "Não informado"}</p>
-        <p><strong>Email:</strong> ${cliente.email || "Não informado"}</p>
-        <p><strong>Telefone:</strong> ${cliente.telefone || "Não informado"}</p>
-        <p><strong>Endereço:</strong> ${enderecoCompleto}</p>
-        <p><strong>Status:</strong> <span class="status-badge ${cliente.status ? "status-ativo" : "status-inativo"}">${cliente.status ? "Ativo" : "Inativo"}</span></p>
-      </div>
-    </div>
-  `
-}
-
-// Edit customer
 function editCliente(id) {
   const cliente = clientes.find((c) => c.cliente_id === id)
   if (!cliente) return
@@ -270,57 +171,72 @@ function editCliente(id) {
   document.getElementById("clienteModalTitle").textContent = "Editar Cliente"
   document.getElementById("clienteId").value = cliente.cliente_id
 
-  // Carregar pessoas no select
-  const pessoaSelect = document.getElementById("clientePessoa")
-  pessoaSelect.innerHTML = '<option value="">Selecione uma pessoa</option>'
-  pessoas.forEach((pessoa) => {
-    const option = document.createElement("option")
-    option.value = pessoa.pessoa_id
-    option.textContent = `${pessoa.nome} (ID: ${pessoa.pessoa_id})`
-    if (pessoa.pessoa_id === cliente.pessoa_id) {
-      option.selected = true
-    }
-    pessoaSelect.appendChild(option)
-  })
-
-  // Desabilitar select de pessoa durante edição
-  pessoaSelect.disabled = true
-
+  document.getElementById("clienteNome").value = cliente.nome || ""
   document.getElementById("clienteCpf").value = cliente.cpf || ""
-
-  // Mostrar dados da pessoa
-  onPessoaSelected()
+  document.getElementById("clienteTelefone").value = cliente.telefone || ""
+  document.getElementById("clienteEmail").value = cliente.email || ""
+  document.getElementById("clienteLogradouro").value = cliente.logradouro || ""
+  document.getElementById("clienteNumero").value = cliente.numero || ""
+  document.getElementById("clienteComplemento").value = cliente.complemento || ""
+  document.getElementById("clienteBairro").value = cliente.bairro || ""
+  document.getElementById("clienteCidade").value = cliente.cidade || ""
+  document.getElementById("clienteEstado").value = cliente.estado || ""
+  document.getElementById("clienteCep").value = cliente.cep || ""
 
   document.getElementById("clienteModal").style.display = "block"
 }
 
-// Save customer form
 async function saveClienteForm(event) {
   event.preventDefault()
 
+  const submitBtn = event.target.querySelector('button[type="submit"]')
+  if (submitBtn.disabled) {
+    console.log(" ⚠️ Formulário já está sendo enviado, ignorando submit duplicado")
+    return
+  }
+
   const formData = new FormData(event.target)
-  const pessoaId = Number.parseInt(formData.get("pessoa_id"))
-  const cpf = formData.get("cpf")
-
-  // Validação
-  if (!pessoaId || isNaN(pessoaId) || pessoaId <= 0) {
-    showToast("Por favor, selecione uma pessoa válida", "error")
-    return
-  }
-
-  if (!cpf || cpf.trim() === "") {
-    showToast("Por favor, informe o CPF", "error")
-    return
-  }
 
   const clienteData = {
-    pessoa_id: pessoaId,
-    cpf: cpf,
+    nome: formData.get("nome")?.trim(),
+    cpf: formData.get("cpf")?.trim(),
+    telefone: formData.get("telefone")?.trim(),
+    email: formData.get("email")?.trim(),
+    endereco: {
+      logradouro: formData.get("logradouro")?.trim(),
+      numero: formData.get("numero")?.trim(),
+      complemento: formData.get("complemento")?.trim() || null,
+      bairro: formData.get("bairro")?.trim(),
+      cidade: formData.get("cidade")?.trim(),
+      estado: formData.get("estado"),
+      cep: formData.get("cep")?.trim(),
+    },
   }
 
-  console.log(" Dados do cliente a salvar:", clienteData)
+  console.log(" 📝 Dados completos do cliente a salvar:", clienteData)
+
+  // Validações básicas
+  if (!clienteData.nome || !clienteData.cpf || !clienteData.telefone || !clienteData.email) {
+    showToast("Por favor, preencha todos os campos obrigatórios de dados pessoais e contato", "error")
+    return
+  }
+
+  if (
+    !clienteData.endereco.logradouro ||
+    !clienteData.endereco.numero ||
+    !clienteData.endereco.bairro ||
+    !clienteData.endereco.cidade ||
+    !clienteData.endereco.estado ||
+    !clienteData.endereco.cep
+  ) {
+    showToast("Por favor, preencha todos os campos obrigatórios de endereço", "error")
+    return
+  }
 
   try {
+    submitBtn.disabled = true
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'
+
     showLoading()
     const token = getToken()
     if (!token) return
@@ -338,7 +254,7 @@ async function saveClienteForm(event) {
     })
 
     const result = await response.json()
-    console.log(" Resposta da API:", result)
+    console.log(" ✅ Resposta da API:", result)
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
@@ -356,9 +272,11 @@ async function saveClienteForm(event) {
     closeClienteModal()
     loadClientes()
   } catch (error) {
-    console.error(" Erro ao salvar cliente:", error)
+    console.error(" ❌ Erro ao salvar cliente:", error)
     showToast("Erro ao salvar cliente: " + error.message, "error")
   } finally {
+    submitBtn.disabled = false
+    submitBtn.innerHTML = "Salvar"
     hideLoading()
   }
 }
@@ -413,7 +331,6 @@ async function performToggleStatus(id, newStatus) {
 // Close customer modal
 function closeClienteModal() {
   document.getElementById("clienteModal").style.display = "none"
-  document.getElementById("clientePessoa").disabled = false
   editingClienteId = null
 }
 
@@ -481,33 +398,15 @@ function isValidJWTFormat(token) {
 
 function showToast(message, type) {
   console.log(`Toast: ${message} (${type})`)
-  // Implementar toast notification aqui
+  alert(message)
 }
 
 function showLoading() {
   console.log("Loading...")
-  // Implementar loading indicator aqui
 }
 
 function hideLoading() {
   console.log("Loading hidden...")
-  // Implementar hide loading aqui
-}
-
-function onPessoaSelected() {
-  const pessoaId = document.getElementById("clientePessoa").value
-
-  if (!pessoaId) {
-    document.getElementById("pessoaInfo").style.display = "none"
-    return
-  }
-
-  const pessoa = pessoas.find((p) => p.pessoa_id === Number.parseInt(pessoaId))
-
-  if (pessoa) {
-    document.getElementById("pessoaNome").textContent = pessoa.nome || "-"
-    document.getElementById("pessoaInfo").style.display = "block"
-  }
 }
 
 // Confirm action global function

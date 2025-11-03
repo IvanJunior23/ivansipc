@@ -41,6 +41,81 @@ class AlertaController {
     }
   }
 
+  static async getAlertasRecompra(req, res) {
+    try {
+      const alertas = await AlertaService.getAlertasRecompra()
+
+      res.json({
+        success: true,
+        data: alertas,
+        message: "Alertas de recompra recuperados com sucesso",
+      })
+    } catch (error) {
+      console.error("Erro ao buscar alertas de recompra:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao buscar alertas de recompra",
+        details: error.message,
+      })
+    }
+  }
+
+  static async getVendasPendentes(req, res) {
+    try {
+      const alertas = await AlertaService.getVendasPendentes()
+
+      res.json({
+        success: true,
+        data: alertas,
+        message: "Alertas de vendas pendentes recuperados com sucesso",
+      })
+    } catch (error) {
+      console.error("Erro ao buscar vendas pendentes:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao buscar vendas pendentes",
+        details: error.message,
+      })
+    }
+  }
+
+  static async getComprasPendentes(req, res) {
+    try {
+      const alertas = await AlertaService.getComprasPendentes()
+
+      res.json({
+        success: true,
+        data: alertas,
+        message: "Alertas de compras pendentes recuperados com sucesso",
+      })
+    } catch (error) {
+      console.error("Erro ao buscar compras pendentes:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao buscar compras pendentes",
+        details: error.message,
+      })
+    }
+  }
+
+  static async getStats(req, res) {
+    try {
+      const stats = await AlertaService.getStats()
+
+      res.json({
+        success: true,
+        data: stats,
+      })
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas:", error)
+      res.status(500).json({
+        success: false,
+        error: "Erro ao buscar estatísticas",
+        details: error.message,
+      })
+    }
+  }
+
   // Contar alertas
   static async getContadorAlertas(req, res) {
     try {

@@ -35,12 +35,12 @@ class ClienteController {
   static async listar(req, res) {
     try {
       const incluirInativos = req.query.incluir_inativos === "true"
-      console.log("[v0] Controller: incluirInativos =", incluirInativos)
+      console.log(" Controller: incluirInativos =", incluirInativos)
 
       const clientes = await ClienteService.listarClientes(incluirInativos)
 
-      console.log("[v0] Controller: Total de clientes retornados =", clientes.length)
-      console.log("[v0] Controller: Clientes por status:", {
+      console.log(" Controller: Total de clientes retornados =", clientes.length)
+      console.log(" Controller: Clientes por status:", {
         ativos: clientes.filter((c) => c.status).length,
         inativos: clientes.filter((c) => !c.status).length,
       })
@@ -50,7 +50,7 @@ class ClienteController {
         data: clientes,
       })
     } catch (error) {
-      console.error("[v0] Controller: Erro ao listar clientes:", error)
+      console.error(" Controller: Erro ao listar clientes:", error)
       res.status(500).json({
         success: false,
         message: error.message,

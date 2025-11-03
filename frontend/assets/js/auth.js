@@ -4,8 +4,13 @@ const auth = {
   initialized: false,
 
   init() {
-    if (this.initialized) return
+    console.log(" auth.init() chamado - initialized:", this.initialized)
+    if (this.initialized) {
+      console.log(" auth.init() - já inicializado, retornando")
+      return
+    }
     this.initialized = true
+    console.log(" auth.init() - inicializando pela primeira vez")
 
     this.loadStoredAuth()
 
@@ -14,13 +19,14 @@ const auth = {
     }
 
     this.setupEventListeners()
-    },
-      loadStoredAuth() {
+  },
+
+  loadStoredAuth() {
     const token = localStorage.getItem("token")
     const userData = localStorage.getItem("user")
 
     if (token && userData) {
-         try {
+      try {
         // Validate token format before using it
         if (this.isValidJWTFormat(token)) {
           this.token = token.trim() // Remove any whitespace
@@ -29,12 +35,12 @@ const auth = {
           console.warn("Token inválido encontrado no localStorage, limpando...")
           this.clearAuth()
         }
-        } catch (error) {
-           console.error("Erro ao carregar dados do localStorage:", error)
+      } catch (error) {
+        console.error("Erro ao carregar dados do localStorage:", error)
         this.clearAuth()
-             }
+      }
     }
-      },
+  },
 
   isValidJWTFormat(token) {
     if (!token || typeof token !== "string") return false
@@ -53,7 +59,7 @@ const auth = {
       return true
     } catch (error) {
       return false
-       }
+    }
   },
 
   isAuthenticated() {
@@ -68,6 +74,7 @@ const auth = {
   },
 
   async login(email, senha) {
+    console.log(" auth.login() chamado para email:", email)
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -75,6 +82,7 @@ const auth = {
         body: JSON.stringify({ email, senha }),
       })
       const data = await response.json()
+      console.log(" Resposta do login recebida:", data.success)
 
       if (data.success) {
         if (this.isValidJWTFormat(data.token)) {
@@ -84,6 +92,7 @@ const auth = {
           this.token = cleanToken
           this.user = data.user
 
+          console.log(" Login bem-sucedido, redirecionando...")
           window.location.href = "index.html"
           return { success: true }
         } else {
@@ -136,8 +145,8 @@ const auth = {
       headers: {
         ...defaultHeaders,
         ...options.headers,
-         },
-         }
+      },
+    }
 
     try {
       const response = await fetch(url, config)
@@ -163,30 +172,39 @@ const auth = {
   },
 
   setupEventListeners() {
+    console.log(" setupEventListeners() chamado")
     const loginForm = document.getElementById("loginForm")
     if (loginForm) {
-      loginForm.addEventListener("submit", async (e) => {
-        e.preventDefault()
-        const email = document.getElementById("email").value.trim()
-        const senha = document.getElementById("senha").value
-        const submitBtn = loginForm.querySelector('button[type="submit"]')
+      console.log(" Formulário de login encontrado, adicionando event listener")
+      loginForm.addEventListener(
+        "submit",
+        async (e) => {
+          console.log(" Event listener de submit disparado")
+          e.preventDefault()
+          const email = document.getElementById("email").value.trim()
+          const senha = document.getElementById("senha").value
+          const submitBtn = loginForm.querySelector('button[type="submit"]')
 
-        if (!email || !senha) {
-          this.showError("Por favor, preencha todos os campos.")
-          return
-        }
+          if (!email || !senha) {
+            this.showError("Por favor, preencha todos os campos.")
+            return
+          }
 
-        submitBtn.disabled = true
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...'
+          submitBtn.disabled = true
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...'
 
-        const result = await this.login(email, senha)
+          const result = await this.login(email, senha)
 
-        if (!result.success) {
-          this.showError(result.message)
-          submitBtn.disabled = false
-          submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar'
-        }
-      })
+          if (!result.success) {
+            this.showError(result.message)
+            submitBtn.disabled = false
+            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar'
+          }
+        },
+        { once: false },
+      ) // Keep as false but we have protection with initialized flag
+    } else {
+      console.log(" Formulário de login NÃO encontrado")
     }
   },
 
@@ -202,6 +220,7 @@ const auth = {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  console.log(" DOMContentLoaded disparado, chamando auth.init()")
   auth.init()
 })
 

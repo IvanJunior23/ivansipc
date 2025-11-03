@@ -35,6 +35,8 @@ class VendaController {
 
   static async listar(req, res) {
     try {
+      console.log(" VendaController.listar - Filtros recebidos:", req.query)
+
       const filtros = {
         cliente_id: req.query.cliente_id,
         status: req.query.status,
@@ -44,11 +46,17 @@ class VendaController {
       }
 
       const vendas = await VendaService.listarVendas(filtros)
+
+      console.log(" VendaController.listar - Vendas encontradas:", vendas.length)
+
       res.json({
         success: true,
         data: vendas,
       })
     } catch (error) {
+      console.error(" Erro ao listar vendas:", error)
+      console.error(" Stack trace:", error.stack)
+
       res.status(500).json({
         success: false,
         message: error.message,
@@ -76,6 +84,21 @@ class VendaController {
   static async concluir(req, res) {
     try {
       const resultado = await VendaService.concluirVenda(req.params.id)
+      res.json({
+        success: true,
+        message: resultado.message,
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+      })
+    }
+  }
+
+  static async finalizar(req, res) {
+    try {
+      const resultado = await VendaService.finalizarVenda(req.params.id)
       res.json({
         success: true,
         message: resultado.message,

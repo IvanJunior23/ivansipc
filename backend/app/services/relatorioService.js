@@ -87,6 +87,51 @@ class RelatorioService {
       throw new Error(`Erro ao gerar relatório de estoque baixo: ${error.message}`)
     }
   }
+
+  // Relatório específico de clientes
+  static async gerarRelatorioClientes(filtros = {}) {
+    try {
+      const dados = await RelatorioModel.getRelatorioClientes(filtros)
+
+      const resumo = {
+        total_clientes: dados.length,
+        clientes_ativos: dados.filter((c) => c.ativo).length,
+        valor_total_vendas: dados.reduce((sum, c) => sum + (c.valor_total || 0), 0),
+        ticket_medio: dados.length > 0 ? dados.reduce((sum, c) => sum + (c.valor_total || 0), 0) / dados.length : 0,
+      }
+
+      return {
+        dados,
+        resumo,
+        filtros_aplicados: filtros,
+      }
+    } catch (error) {
+      throw new Error(`Erro ao gerar relatório de clientes: ${error.message}`)
+    }
+  }
+
+  // Relatório financeiro
+  static async gerarRelatorioFinanceiro(filtros = {}) {
+    try {
+      const dados = await RelatorioModel.getRelatorioFinanceiro(filtros)
+
+      const resumo = {
+        receita_total: dados.reduce((sum, item) => sum + (item.receita || 0), 0),
+        custos_total: dados.reduce((sum, item) => sum + (item.custos || 0), 0),
+        lucro_bruto: dados.reduce((sum, item) => sum + (item.lucro_bruto || 0), 0),
+      }
+
+      resumo.margem_lucro = resumo.receita_total > 0 ? (resumo.lucro_bruto / resumo.receita_total) * 100 : 0
+
+      return {
+        dados,
+        resumo,
+        filtros_aplicados: filtros,
+      }
+    } catch (error) {
+      throw new Error(`Erro ao gerar relatório financeiro: ${error.message}`)
+    }
+  }
 }
 
 module.exports = RelatorioService

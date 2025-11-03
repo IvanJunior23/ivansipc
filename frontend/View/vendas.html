@@ -150,6 +150,64 @@
             border-radius: 5px;
             font-size: 14px;
         }
+        .filters select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        /* Adding styles for searchable select component */
+        .searchable-select {
+            position: relative;
+            min-width: 200px;
+        }
+        
+        .searchable-select input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .searchable-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .searchable-select-dropdown.active {
+            display: block;
+        }
+        
+        .searchable-select-option {
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .searchable-select-option:hover {
+            background: #f0f0f0;
+        }
+        
+        .searchable-select-option.selected {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        /* </CHANGE> */
+        
         .card {
             background: white;
             border-radius: 8px;
@@ -391,6 +449,7 @@
         .remove-item:hover {
             background: #c0392b;
         }
+        
         .total-section {
             border-top: 1px solid #ddd;
             padding-top: 15px;
@@ -454,33 +513,46 @@
             <button class="btn-primary" onclick="showAddVendaModal()">
                 <i class="fas fa-plus"></i> Nova Venda
             </button>
+            <!-- Substituindo busca simples por filtros práticos -->
             <div class="filters">
                 <select id="filterStatus" onchange="filterVendas()">
                     <option value="">Todos os Status</option>
                     <option value="pendente">Pendente</option>
-                    <option value="finalizada">Finalizada</option>
+                    <option value="concluida">Finalizada</option>
                     <option value="cancelada">Cancelada</option>
                 </select>
+                
+                <!-- Replacing simple select with searchable select for clientes -->
+                <div class="searchable-select" id="searchableClienteFilter">
+                    <input 
+                        type="text" 
+                        id="filterClienteSearch" 
+                        placeholder="Buscar cliente..."
+                        autocomplete="off"
+                        readonly
+                    >
+                    <div class="searchable-select-dropdown" id="filterClienteDropdown">
+                        <div class="searchable-select-option" data-value="">Todos os Clientes</div>
+                    </div>
+                </div>
+                <!-- </CHANGE> -->
+                
                 <select id="filterFormaPagamento" onchange="filterVendas()">
                     <option value="">Todas as Formas</option>
                 </select>
-                <input type="date" id="filterDataInicio" onchange="filterVendas()" title="Data Início">
-                <input type="date" id="filterDataFim" onchange="filterVendas()" title="Data Fim">
+                <input type="date" id="filterDataInicio" onchange="filterVendas()" placeholder="Data Início" title="Data Início">
+                <input type="date" id="filterDataFim" onchange="filterVendas()" placeholder="Data Fim" title="Data Fim">
+                <button class="btn-secondary" onclick="clearFilters()" title="Limpar Filtros">
+                    <i class="fas fa-times"></i> Limpar
+                </button>
             </div>
-            <div class="search-box">
-                <input type="text" id="searchVenda" placeholder="Buscar venda..." onkeyup="searchVendas()">
-                <i class="fas fa-search"></i>
-            </div>
+            <!-- </CHANGE> -->
         </div>
 
         <div class="card">
             <div class="card-header">
                 <h3>Lista de Vendas</h3>
-                <div class="card-actions">
-                    <button class="btn-secondary" onclick="exportVendas()">
-                        <i class="fas fa-download"></i> Exportar
-                    </button>
-                </div>
+                
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -558,9 +630,9 @@
                         </div>
                         <div class="total-section">
                             <div class="total-breakdown">
-                                <p>Subtotal: R$ <span id="vendaSubtotal">0.00</span></p>
+                                <p>Subtotal: R$ <span id="vendaSubtotalValor">0.00</span></p>
                                 <p>Desconto: R$ <span id="vendaDescontoValor">0.00</span></p>
-                                <strong>Total: R$ <span id="vendaTotal">0.00</span></strong>
+                                <p><strong>Total: R$ <span id="vendaTotalValor">0.00</span></strong></p>
                             </div>
                         </div>
                     </div>

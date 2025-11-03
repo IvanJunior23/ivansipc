@@ -2,6 +2,7 @@ const ClienteModel = require("../models/clienteModel")
 const PessoaModel = require("../models/pessoaModel")
 const ContatoModel = require("../models/contatoModel")
 const EnderecoModel = require("../models/enderecoModel")
+const PessoaService = require("./pessoaService")
 const { db } = require("../../config/database")
 
 class ClienteService {
@@ -10,32 +11,33 @@ class ClienteService {
     try {
       await connection.beginTransaction()
 
-      const { pessoa_id, cpf } = dadosCliente
+      const { cpf, nome, telefone, email, endereco } = dadosCliente
 
-      // Validar se pessoa existe e está ativa
-      const pessoa = await PessoaModel.buscarPorId(pessoa_id)
-      if (!pessoa) {
-        throw new Error("Pessoa não encontrada")
-      }
-      if (!pessoa.status) {
-        throw new Error("Pessoa está inativa")
-      }
-
-      // Verificar se pessoa já tem cliente associado
-      const clienteExistente = await ClienteModel.buscarPorPessoaId(pessoa_id)
-      if (clienteExistente) {
-        throw new Error("Esta pessoa já está cadastrada como cliente")
-      }
-
-      // Verificar se CPF já existe
+      // Validar CPF único
       const cpfExistente = await ClienteModel.buscarPorCpf(cpf)
       if (cpfExistente) {
         throw new Error("Este CPF já está cadastrado")
       }
 
-      // Criar cliente
+      // Criar pessoa completa (com contato e endereço)
+      const dadosPessoa = {
+        nome,
+        contato:
+          telefone || email
+            ? {
+                nome_completo: nome,
+                telefone: telefone || null,
+                email: email || null,
+              }
+            : null,
+        endereco: endereco || null,
+      }
+
+      const pessoaId = await PessoaService.criarPessoaCompleta(dadosPessoa)
+
+      // Criar cliente vinculado à pessoa
       const clienteId = await ClienteModel.criar({
-        pessoa_id,
+        pessoa_id: pessoaId,
         cpf,
       })
 
@@ -71,24 +73,44 @@ class ClienteService {
         throw new Error("Cliente não encontrado")
       }
 
-      const { cpf } = dadosCliente
+      const { cpf, nome, telefone, email, endereco } = dadosCliente
 
       // Verificar se outro cliente já usa este CPF
-      if (cpf !== clienteExistente.cpf) {
+      if (cpf && cpf !== clienteExistente.cpf) {
         const clienteComMesmoCpf = await ClienteModel.buscarPorCpf(cpf)
         if (clienteComMesmoCpf && clienteComMesmoCpf.cliente_id !== Number.parseInt(id)) {
           throw new Error("Cliente com este CPF já existe")
         }
       }
 
-      // Atualizar cliente
-      const sucesso = await ClienteModel.atualizar(id, {
-        cpf,
-        status: dadosCliente.status !== undefined ? dadosCliente.status : clienteExistente.status,
-      })
+      // Atualizar pessoa completa (com contato e endereço)
+      if (nome || telefone || email || endereco) {
+        const dadosPessoa = {
+          nome: nome || clienteExistente.nome,
+          contato:
+            telefone || email
+              ? {
+                  nome_completo: nome || clienteExistente.nome,
+                  telefone: telefone || null,
+                  email: email || null,
+                }
+              : null,
+          endereco: endereco || null,
+        }
 
-      if (!sucesso) {
-        throw new Error("Erro ao atualizar cliente")
+        await PessoaService.atualizarPessoaCompleta(clienteExistente.pessoa_id, dadosPessoa)
+      }
+
+      // Atualizar cliente
+      if (cpf) {
+        const sucesso = await ClienteModel.atualizar(id, {
+          cpf,
+          status: dadosCliente.status !== undefined ? dadosCliente.status : clienteExistente.status,
+        })
+
+        if (!sucesso) {
+          throw new Error("Erro ao atualizar cliente")
+        }
       }
 
       await connection.commit()
