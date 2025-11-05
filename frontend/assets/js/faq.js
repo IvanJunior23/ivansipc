@@ -17,7 +17,7 @@ function renderDefaultFAQ() {
         {
           pergunta: "Como alterar minha senha?",
           resposta:
-            'Clique no botão "Alterar Senha" localizado na barra lateral esquerda, abaixo das suas informações de usuário. Digite sua senha atual e a nova senha duas vezes para confirmar. A senha deve ter no mínimo 6 caracteres.',
+            'Clique no botão "Alterar Senha" localizado na pagina de login, abaixo das suas informações de usuário. Digite sua senha atual e a nova senha duas vezes para confirmar. A senha deve ter no mínimo 6 caracteres.',
         },
         {
           pergunta: "Quais são os tipos de usuário e suas permissões?",
@@ -42,7 +42,7 @@ function renderDefaultFAQ() {
         {
           pergunta: "Como adicionar imagens às peças?",
           resposta:
-            'Ao cadastrar ou editar uma peça, clique em "Adicionar Imagem" e selecione até 5 imagens do seu computador. As imagens ajudam na identificação visual dos produtos e aparecem nas vendas.',
+            'Ao cadastrar ou editar uma peça, clique em "Adicionar Imagem" e selecione as imagens do seu computador. As imagens ajudam na identificação visual dos produtos e aparecem nas vendas.',
         },
         {
           pergunta: "O que é estoque mínimo e como funciona?",
@@ -50,7 +50,7 @@ function renderDefaultFAQ() {
             "O estoque mínimo é a quantidade mínima que você deseja manter de cada peça. Quando o estoque fica abaixo desse valor, o sistema gera um alerta automático no Dashboard para que você possa fazer uma nova compra do fornecedor.",
         },
         {
-          pergunta: "Como desativar uma peça sem excluí-la?",
+          pergunta: "Como desativar uma peça?",
           resposta:
             "Na listagem de peças, clique no botão de status (ícone de olho) ao lado da peça. Peças inativas não aparecem no formulário de vendas, mas continuam no sistema para consultas e relatórios históricos.",
         },
@@ -72,7 +72,7 @@ function renderDefaultFAQ() {
         {
           pergunta: "Como cadastrar um novo cliente?",
           resposta:
-            'Acesse "Clientes" e clique em "Novo Cliente". Escolha o tipo (Pessoa Física ou Jurídica), preencha os dados pessoais, contato e endereço. Para pessoa jurídica, informe também o CNPJ e razão social.',
+            'Acesse "Clientes" e clique em "Novo Cliente". Preencha os dados pessoais, contato e endereço. Para pessoa jurídica, informe também o CNPJ e razão social.',
         },
         {
           pergunta: "Qual a diferença entre CPF e CNPJ no cadastro?",
@@ -337,7 +337,7 @@ function renderDefaultFAQ() {
         {
           pergunta: "O sistema registra minhas ações?",
           resposta:
-            "Sim, o sistema mantém logs de ações importantes como cadastros, alterações e exclusões. Isso garante rastreabilidade e segurança das operações.",
+            "Sim, o sistema mantém logs de ações importantes como cadastros e alterações. Isso garante rastreabilidade e segurança das operações.",
         },
       ],
     },
